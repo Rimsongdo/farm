@@ -64,7 +64,7 @@ notifs.post('/fetchData', async (req, res) => {
     }
 
     // Dernière température mesurée
-    const latestData = feeds[0];
+    const latestData = feeds[results-1];
     const temperature = parseFloat(latestData.field1);
 
     if (isNaN(temperature)) {
