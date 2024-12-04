@@ -20,7 +20,7 @@ admin.initializeApp({
 // Seuils prédéfinis
 const TEMPERATURE_MIN_THRESHOLD = 15; // Seuil minimum
 const TEMPERATURE_MAX_THRESHOLD = 35; // Seuil maximum
-
+var id;
 // Fonction pour envoyer une notification via FCM
 const sendNotification = async (token, title, body) => {
   const message = {
@@ -42,10 +42,11 @@ const sendNotification = async (token, title, body) => {
 const fetchAndNotify = async () => {
   try {
     // Paramètres (remplacer par les valeurs appropriées ou les récupérer dynamiquement)
-    const thingSpeakChannelId = 'YOUR_CHANNEL_ID'; // Remplacer par l'ID du canal ThingSpeak
-    const thingSpeakApiKey = 'YOUR_API_KEY'; // Remplacer par la clé API
-    const userId = 'YOUR_USER_ID'; // Remplacer par l'ID de l'utilisateur
-
+    
+    const userId = id; // Remplacer par l'ID de l'utilisateur
+    const user = await User.findById(userId);
+    const thingSpeakChannelId = user.thingSpeakChannelId; // Remplacer par l'ID du canal ThingSpeak
+    const thingSpeakApiKey = user.thingSpeakApiKey; // Remplacer par la clé API
     // Appel API ThingSpeak pour récupérer les données
     const results = 10; // Nombre de résultats
     const response = await axios.get(
@@ -76,7 +77,7 @@ const fetchAndNotify = async () => {
     console.log(`Température mesurée : ${temperature}°C`);
 
     // Récupération de l'utilisateur
-    const user = await User.findById(userId);
+    
     const fcmToken = user.Token;
     if (!user) {
       console.log('Utilisateur non trouvé.');
@@ -132,7 +133,7 @@ const fetchAndNotify = async () => {
   }
 };
 
-// Planifier la tâche cron pour exécuter la fonction toutes les heures (ou ajuster selon vos besoins)
+
 cron.schedule('* * * * *', () => {
   console.log('Exécution périodique de la vérification des données et des notifications...');
   fetchAndNotify();
@@ -142,7 +143,7 @@ cron.schedule('* * * * *', () => {
 notifs.post('/fetchData', async (req, res) => {
   try {
     const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
-
+    id=userId;
     // Vérification des champs obligatoires
     if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
       return res.status(400).json({
