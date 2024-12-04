@@ -2,7 +2,7 @@ const axios = require('axios'); // Pour appeler l'API de ThingSpeak
 
 const express=require('express') // Pour hasher le mot de passe
 const notifs = express.Router();
-
+const app = express();
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 
