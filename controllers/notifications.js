@@ -64,8 +64,11 @@ notifs.post('/fetchData', async (req, res) => {
     }
 
     // Dernière température mesurée
-    const latestData = feeds[results-1];
+    const latestData = feeds[results - 1];
     const temperature = parseFloat(latestData.field1);
+    const humidity = parseFloat(latestData.field2);
+    const moisture = parseFloat(latestData.field3);
+    const npk = parseFloat(latestData.field4);
 
     if (isNaN(temperature)) {
       return res.status(400).json({ message: 'La donnée de température est invalide.' });
@@ -75,7 +78,7 @@ notifs.post('/fetchData', async (req, res) => {
 
     // Récupération de l'utilisateur
     const user = await User.findById(userId);
-    const fcmToken=user.Token;
+    const fcmToken = user.Token;
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
@@ -87,16 +90,21 @@ notifs.post('/fetchData', async (req, res) => {
       if (!user.alerts.temperatureLow) {
         shouldSendNotification = true;
         user.alerts.temperatureLow = true; // Marquer comme envoyé
+        user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
       }
     } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
       if (!user.alerts.temperatureHigh) {
         shouldSendNotification = true;
         user.alerts.temperatureHigh = true; // Marquer comme envoyé
+        user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
       }
     } else {
-      // Réinitialisation des alertes si la température revient à la normale
-      user.alerts.temperatureLow = false;
-      user.alerts.temperatureHigh = false;
+      // Si la température est de retour dans la plage normale, envoyer une notification si nécessaire
+      if (user.alerts.temperatureLow || user.alerts.temperatureHigh) {
+        shouldSendNotification = true;
+        user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
+        user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
+      }
     }
 
     // Sauvegarde des modifications dans la base de données
@@ -104,16 +112,29 @@ notifs.post('/fetchData', async (req, res) => {
 
     // Envoi de la notification si nécessaire
     if (shouldSendNotification) {
-      const alertType =
-        temperature < TEMPERATURE_MIN_THRESHOLD
-          ? { title: 'Température basse', body: `La température est tombée à ${temperature}°C.` }
-          : { title: 'Température élevée', body: `La température a atteint ${temperature}°C.` };
+      let alertType;
+      if (temperature < TEMPERATURE_MIN_THRESHOLD) {
+        alertType = { 
+          title: 'Température basse', 
+          body: `La température est tombée à ${temperature}°C.` 
+        };
+      } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
+        alertType = { 
+          title: 'Température élevée', 
+          body: `La température a atteint ${temperature}°C.` 
+        };
+      } else {
+        alertType = { 
+          title: 'Température normale', 
+          body: `La température est revenue à la normale de ${temperature}°C.` 
+        };
+      }
 
       await sendNotification(fcmToken, alertType.title, alertType.body);
     }
 
     // Retour des données au frontend
-    res.status(200).json(response.data)
+    res.status(200).json(response.data);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
