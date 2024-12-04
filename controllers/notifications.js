@@ -101,7 +101,7 @@ notifs.post('/fetchData', async (req, res) => {
     } else {
       // Si la température est de retour dans la plage normale, envoyer une notification si nécessaire
       if (user.alerts.temperatureLow || user.alerts.temperatureHigh) {
-        shouldSendNotification = true;
+        
         user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
         user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
       }
@@ -124,10 +124,7 @@ notifs.post('/fetchData', async (req, res) => {
           body: `La température a atteint ${temperature}°C.` 
         };
       } else {
-        alertType = { 
-          title: 'Température normale', 
-          body: `La température est revenue à la normale de ${temperature}°C.` 
-        };
+        
       }
 
       await sendNotification(fcmToken, alertType.title, alertType.body);
