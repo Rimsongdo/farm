@@ -40,10 +40,10 @@ const sendNotification = async (token, title, body) => {
 // Route pour récupérer les données et vérifier les seuils
 notifs.post('/fetchData', async (req, res) => {
   try {
-    const { thingSpeakChannelId, thingSpeakApiKey, fcmToken, userId } = req.body;
+    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
 
     // Vérification des champs obligatoires
-    if (!thingSpeakChannelId || !thingSpeakApiKey || !fcmToken || !userId) {
+    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
       return res.status(400).json({
         message: 'Channel ID, API Key, Token FCM, et ID utilisateur sont requis.',
       });
@@ -75,7 +75,7 @@ notifs.post('/fetchData', async (req, res) => {
 
     // Récupération de l'utilisateur
     const user = await User.findById(userId);
-
+    const fcmToken=user.Token;
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
