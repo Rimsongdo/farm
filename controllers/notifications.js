@@ -4,6 +4,7 @@ const admin = require('firebase-admin');
 const bodyParser = require('body-parser');
 const User = require('../models/user'); // Modèle utilisateur
 require('dotenv').config();
+const cron = require('node-cron'); // Import de node-cron
 
 const notifs = express.Router();
 
@@ -37,17 +38,13 @@ const sendNotification = async (token, title, body) => {
   }
 };
 
-// Route pour récupérer les données et vérifier les seuils
-notifs.post('/fetchData', async (req, res) => {
+// Fonction pour récupérer les données de ThingSpeak et envoyer des notifications
+const fetchAndNotify = async () => {
   try {
-    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
-
-    // Vérification des champs obligatoires
-    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
-      return res.status(400).json({
-        message: 'Channel ID, API Key, Token FCM, et ID utilisateur sont requis.',
-      });
-    }
+    // Paramètres (remplacer par les valeurs appropriées ou les récupérer dynamiquement)
+    const thingSpeakChannelId = 'YOUR_CHANNEL_ID'; // Remplacer par l'ID du canal ThingSpeak
+    const thingSpeakApiKey = 'YOUR_API_KEY'; // Remplacer par la clé API
+    const userId = 'YOUR_USER_ID'; // Remplacer par l'ID de l'utilisateur
 
     // Appel API ThingSpeak pour récupérer les données
     const results = 10; // Nombre de résultats
@@ -60,7 +57,8 @@ notifs.post('/fetchData', async (req, res) => {
 
     const feeds = response.data.feeds;
     if (feeds.length === 0) {
-      return res.status(404).json({ message: 'Aucune donnée disponible.' });
+      console.log('Aucune donnée disponible.');
+      return;
     }
 
     // Dernière température mesurée
@@ -71,7 +69,8 @@ notifs.post('/fetchData', async (req, res) => {
     const npk = parseFloat(latestData.field4);
 
     if (isNaN(temperature)) {
-      return res.status(400).json({ message: 'La donnée de température est invalide.' });
+      console.log('La donnée de température est invalide.');
+      return;
     }
 
     console.log(`Température mesurée : ${temperature}°C`);
@@ -80,7 +79,8 @@ notifs.post('/fetchData', async (req, res) => {
     const user = await User.findById(userId);
     const fcmToken = user.Token;
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+      console.log('Utilisateur non trouvé.');
+      return;
     }
 
     let shouldSendNotification = false;
@@ -101,7 +101,6 @@ notifs.post('/fetchData', async (req, res) => {
     } else {
       // Si la température est de retour dans la plage normale, envoyer une notification si nécessaire
       if (user.alerts.temperatureLow || user.alerts.temperatureHigh) {
-        
         user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
         user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
       }
@@ -123,14 +122,43 @@ notifs.post('/fetchData', async (req, res) => {
           title: 'Température élevée', 
           body: `La température a atteint ${temperature}°C.` 
         };
-      } else {
-        
       }
 
       await sendNotification(fcmToken, alertType.title, alertType.body);
     }
 
-    // Retour des données au frontend
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
+  }
+};
+
+// Planifier la tâche cron pour exécuter la fonction toutes les heures (ou ajuster selon vos besoins)
+cron.schedule('0 * * * *', () => {
+  console.log('Exécution périodique de la vérification des données et des notifications...');
+  fetchAndNotify();
+});
+
+// Route pour récupérer les données et vérifier les seuils (non affectée par cron)
+notifs.post('/fetchData', async (req, res) => {
+  try {
+    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
+
+    // Vérification des champs obligatoires
+    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
+      return res.status(400).json({
+        message: 'Channel ID, API Key, Token FCM, et ID utilisateur sont requis.',
+      });
+    }
+
+    // Appel API ThingSpeak pour récupérer les données
+    const results = 10; // Nombre de résultats
+    const response = await axios.get(
+      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
+      {
+        params: { api_key: thingSpeakApiKey, results },
+      }
+    );
+
     res.status(200).json(response.data);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
