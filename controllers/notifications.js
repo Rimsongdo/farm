@@ -20,7 +20,7 @@ admin.initializeApp({
 // Seuils prédéfinis
 const TEMPERATURE_MIN_THRESHOLD = 15; // Seuil minimum
 const TEMPERATURE_MAX_THRESHOLD = 35; // Seuil maximum
-var id;
+
 // Fonction pour envoyer une notification via FCM
 const sendNotification = async (token, title, body) => {
   const message = {
@@ -41,101 +41,103 @@ const sendNotification = async (token, title, body) => {
 // Fonction pour récupérer les données de ThingSpeak et envoyer des notifications
 const fetchAndNotify = async () => {
   try {
-    // Paramètres (remplacer par les valeurs appropriées ou les récupérer dynamiquement)
-    
-    const userId = id; // Remplacer par l'ID de l'utilisateur
-    const user = await User.findById(userId);
-    const thingSpeakChannelId = user.thingSpeakChannelId; // Remplacer par l'ID du canal ThingSpeak
-    const thingSpeakApiKey = user.thingSpeakApiKey; // Remplacer par la clé API
-    // Appel API ThingSpeak pour récupérer les données
-    const results = 10; // Nombre de résultats
-    const response = await axios.get(
-      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-      {
-        params: { api_key: thingSpeakApiKey, results },
-      }
-    );
+    // Récupération de tous les utilisateurs
+    const users = await User.find(); // Trouver tous les utilisateurs dans la base de données
 
-    const feeds = response.data.feeds;
-    if (feeds.length === 0) {
-      console.log('Aucune donnée disponible.');
+    if (!users || users.length === 0) {
+      console.log('Aucun utilisateur trouvé.');
       return;
     }
 
-    // Dernière température mesurée
-    const latestData = feeds[results - 1];
-    const temperature = parseFloat(latestData.field1);
-    const humidity = parseFloat(latestData.field2);
-    const moisture = parseFloat(latestData.field3);
-    const npk = parseFloat(latestData.field4);
-
-    if (isNaN(temperature)) {
-      console.log('La donnée de température est invalide.');
-      return;
-    }
-
-    console.log(`Température mesurée : ${temperature}°C`);
-
-    // Récupération de l'utilisateur
-    
-    const fcmToken = user.Token;
-    if (!user) {
-      console.log('Utilisateur non trouvé.');
-      return;
-    }
-
-    let shouldSendNotification = false;
-
-    // Vérification des seuils et état précédent
-    if (temperature < TEMPERATURE_MIN_THRESHOLD) {
-      if (!user.alerts.temperatureLow) {
-        shouldSendNotification = true;
-        user.alerts.temperatureLow = true; // Marquer comme envoyé
-        user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
+    for (let user of users) {
+      const { thingSpeakChannelId, thingSpeakApiKey, Token } = user;
+      
+      if (!thingSpeakChannelId || !thingSpeakApiKey || !Token) {
+        console.log(`Informations manquantes pour l'utilisateur ${user._id}`);
+        continue; // Passer à l'utilisateur suivant si des informations manquent
       }
-    } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
-      if (!user.alerts.temperatureHigh) {
-        shouldSendNotification = true;
-        user.alerts.temperatureHigh = true; // Marquer comme envoyé
-        user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
-      }
-    } else {
-      // Si la température est de retour dans la plage normale, envoyer une notification si nécessaire
-      if (user.alerts.temperatureLow || user.alerts.temperatureHigh) {
-        user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
-        user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
-      }
-    }
 
-    // Sauvegarde des modifications dans la base de données
-    await user.save();
+      // Appel API ThingSpeak pour récupérer les données
+      const results = 10; // Nombre de résultats
+      const response = await axios.get(
+        `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
+        {
+          params: { api_key: thingSpeakApiKey, results },
+        }
+      );
 
-    // Envoi de la notification si nécessaire
-    if (shouldSendNotification) {
-      let alertType;
+      const feeds = response.data.feeds;
+      if (feeds.length === 0) {
+        console.log('Aucune donnée disponible pour l\'utilisateur', user._id);
+        continue;
+      }
+
+      // Dernière température mesurée
+      const latestData = feeds[results - 1];
+      const temperature = parseFloat(latestData.field1);
+      const humidity = parseFloat(latestData.field2);
+      const moisture = parseFloat(latestData.field3);
+      const npk = parseFloat(latestData.field4);
+
+      if (isNaN(temperature)) {
+        console.log('La donnée de température est invalide pour l\'utilisateur', user._id);
+        continue;
+      }
+
+      console.log(`Température mesurée pour l'utilisateur ${user._id}: ${temperature}°C`);
+
+      let shouldSendNotification = false;
+
+      // Vérification des seuils et état précédent
       if (temperature < TEMPERATURE_MIN_THRESHOLD) {
-        alertType = { 
-          title: 'Température basse', 
-          body: `La température est tombée à ${temperature}°C.` 
-        };
+        if (!user.alerts.temperatureLow) {
+          shouldSendNotification = true;
+          user.alerts.temperatureLow = true; // Marquer comme envoyé
+          user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
+        }
       } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
-        alertType = { 
-          title: 'Température élevée', 
-          body: `La température a atteint ${temperature}°C.` 
-        };
+        if (!user.alerts.temperatureHigh) {
+          shouldSendNotification = true;
+          user.alerts.temperatureHigh = true; // Marquer comme envoyé
+          user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
+        }
+      } else {
+        // Si la température est de retour dans la plage normale, envoyer une notification si nécessaire
+        if (user.alerts.temperatureLow || user.alerts.temperatureHigh) {
+          user.alerts.temperatureLow = false; // Réinitialiser l'alerte de température basse
+          user.alerts.temperatureHigh = false; // Réinitialiser l'alerte de température élevée
+        }
       }
 
-      await sendNotification(fcmToken, alertType.title, alertType.body);
-    }
+      // Sauvegarde des modifications dans la base de données
+      await user.save();
 
+      // Envoi de la notification si nécessaire
+      if (shouldSendNotification) {
+        let alertType;
+        if (temperature < TEMPERATURE_MIN_THRESHOLD) {
+          alertType = { 
+            title: 'Température basse', 
+            body: `La température est tombée à ${temperature}°C.` 
+          };
+        } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
+          alertType = { 
+            title: 'Température élevée', 
+            body: `La température a atteint ${temperature}°C.` 
+          };
+        }
+
+        await sendNotification(Token, alertType.title, alertType.body);
+      }
+    }
   } catch (error) {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
   }
 };
 
-
+// Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs
 cron.schedule('* * * * *', () => {
-  console.log('Exécution périodique de la vérification des données et des notifications...');
+  console.log('Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs...');
   fetchAndNotify();
 });
 
@@ -143,12 +145,18 @@ cron.schedule('* * * * *', () => {
 notifs.post('/fetchData', async (req, res) => {
   try {
     const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
-    id=userId;
+
     // Vérification des champs obligatoires
     if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
       return res.status(400).json({
         message: 'Channel ID, API Key, Token FCM, et ID utilisateur sont requis.',
       });
+    }
+
+    // Récupération de l'utilisateur et des données
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
     // Appel API ThingSpeak pour récupérer les données
