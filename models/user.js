@@ -40,7 +40,11 @@ const userSchema = new mongoose.Schema({
   Token:{
     required:false,
     type:String,
-  }
+  },
+  alerts: {
+    temperatureLow: { type: Boolean, default: false },
+    temperatureHigh: { type: Boolean, default: false },
+  },
 },{
   collection: 'Farmers' // Nom de la collection personnalisée
 });
