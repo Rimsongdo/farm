@@ -133,7 +133,7 @@ const fetchAndNotify = async () => {
 };
 
 // Planifier la tâche cron pour exécuter la fonction toutes les heures (ou ajuster selon vos besoins)
-cron.schedule('0 * * * *', () => {
+cron.schedule('* * * * *', () => {
   console.log('Exécution périodique de la vérification des données et des notifications...');
   fetchAndNotify();
 });
