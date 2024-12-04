@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const config = require('./utils/config');
 const cors = require('cors');
 const userServices=require('./controllers/userLogin');
-const notifs = require('./controllers/notifications');
+const notifServices = require('./controllers/notifications');
 const app = express();
 
 mongoose.connect(config.MONGODB_URL)
@@ -13,6 +13,6 @@ mongoose.connect(config.MONGODB_URL)
 app.use(cors());
 app.use(express.json());
 app.use('/api/userServices',userServices)
-app.use('/',notifs)
+app.use('/',notifServices)
 
 module.exports = app 
