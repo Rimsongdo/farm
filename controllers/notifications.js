@@ -1,3 +1,43 @@
+const axios = require('axios');
+const express = require('express');
+const admin = require('firebase-admin');
+const bodyParser = require('body-parser');
+const User = require('../models/user'); // Modèle utilisateur
+require('dotenv').config();
+const cron = require('node-cron'); // Import de node-cron
+const notifs = express.Router();
+// Middleware pour analyser les requêtes JSON
+notifs.use(bodyParser.json());
+// Configuration Firebase
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+// Seuils prédéfinis
+const TEMPERATURE_MIN_THRESHOLD = 15; // Seuil minimum
+const TEMPERATURE_MAX_THRESHOLD = 35; // Seuil maximum
+const HUMIDITY_MIN_THRESHOLD = 30; // Seuil minimum
+const HUMIDITY_MAX_THRESHOLD = 80; // Seuil maximum
+const MOISTURE_MIN_THRESHOLD = 20; // Seuil minimum
+const MOISTURE_MAX_THRESHOLD = 80; // Seuil maximum
+const NPK_MIN_THRESHOLD = 5; // Seuil minimum
+const NPK_MAX_THRESHOLD = 10; // Seuil maximum
+
+// Fonction pour envoyer une notification via FCM
+const sendNotification = async (token, title, body) => {
+  const message = {
+    notification: { title, body },
+    token, // Token FCM de l'appareil
+  };
+  try {
+    const response = await admin.messaging().send(message);
+    console.log('Notification envoyée avec succès:', response);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de la notification:', error.message);
+  }
+};
+
 // Fonction pour récupérer les données de ThingSpeak et envoyer des notifications
 const fetchAndNotify = async () => {
   try {
@@ -11,7 +51,7 @@ const fetchAndNotify = async () => {
 
     for (let user of users) {
       const { thingSpeakChannelId, thingSpeakApiKey, Token } = user;
-      
+
       if (!thingSpeakChannelId || !thingSpeakApiKey || !Token) {
         console.log(`Informations manquantes pour l'utilisateur ${user._id}`);
         continue; // Passer à l'utilisateur suivant si des informations manquent
@@ -188,3 +228,16 @@ const fetchAndNotify = async () => {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
   }
 };
+
+// Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs
+cron.schedule('* * * * *', () => {
+  console.log('Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs...');
+  fetchAndNotify();
+});
+
+// Route pour récupérer les notifications
+notifs.get('/', (req, res) => {
+  res.send('API de notifications en cours de fonctionnement.');
+});
+
+module.exports = notifs;
