@@ -227,32 +227,10 @@ notifs.post('/fetchData', async (req, res) => {
         params: { api_key: thingSpeakApiKey, results },
       }
     );
-
-    const feeds = response.data.feeds;
-    if (feeds.length === 0) {
-      return res.status(404).json({ message: 'Aucune donnée disponible.' });
-    }
-
-    const latestData = feeds[results - 1];
-    const temperature = parseFloat(latestData.field1);
-    const humidity = parseFloat(latestData.field2);
-    const moisture = parseFloat(latestData.field3);
-    const npk = parseFloat(latestData.field4);
-
-    if (isNaN(temperature) || isNaN(humidity) || isNaN(moisture) || isNaN(npk)) {
-      return res.status(400).json({ message: 'Données invalides.' });
-    }
-
-    // Retourner les données dans la réponse
-    res.json({
-      temperature,
-      humidity,
-      moisture,
-      npk,
-    });
+    res.status(200).json(response.data);
   } catch (error) {
-    console.error('Erreur lors de la récupération des données:', error.message);
-    res.status(500).json({ message: 'Erreur interne du serveur.' });
+    console.error('Erreur lors de la récupération des données :', error.message);
+    res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
   }
 });
 
