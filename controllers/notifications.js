@@ -235,9 +235,33 @@ cron.schedule('* * * * *', () => {
   fetchAndNotify();
 });
 
-// Route pour récupérer les notifications
-notifs.get('/', (req, res) => {
-  res.send('API de notifications en cours de fonctionnement.');
+notifs.post('/fetchData', async (req, res) => {
+  try {
+    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
+    // Vérification des champs obligatoires
+    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
+      return res.status(400).json({
+        message: 'Channel ID, API Key, Token FCM, et ID utilisateur sont requis.',
+      });
+    }
+    // Récupération de l'utilisateur et des données
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    // Appel API ThingSpeak pour récupérer les données
+    const results = 10; // Nombre de résultats
+    const response = await axios.get(
+      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
+      {
+        params: { api_key: thingSpeakApiKey, results },
+      }
+    );
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données :', error.message);
+    res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
+  }
 });
 
 module.exports = notifs;
