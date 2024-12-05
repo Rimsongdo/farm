@@ -44,6 +44,12 @@ const userSchema = new mongoose.Schema({
   alerts: {
     temperatureLow: { type: Boolean, default: false },
     temperatureHigh: { type: Boolean, default: false },
+    humidityLow: { type: Boolean, default: false },
+    humidityHigh: { type: Boolean, default: false },
+    moistureLow: { type: Boolean, default: false },
+    moistureHigh: { type: Boolean, default: false },
+    npkLow: { type: Boolean, default: false },
+    npkHigh: { type: Boolean, default: false },
   },
 },{
   collection: 'Farmers' // Nom de la collection personnalisée
