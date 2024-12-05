@@ -81,7 +81,7 @@ const fetchAndNotify = async () => {
 
       if (isNaN(temperature) || isNaN(humidity) || isNaN(moisture) || isNaN(npk)) {
         console.log('Données invalides pour l\'utilisateur', user._id);
-        continue;
+        
       }
 
       console.log(`Température: ${temperature}°C, Humidité: ${humidity}%, Humidité du sol: ${moisture}%, NPK: ${npk}`);
