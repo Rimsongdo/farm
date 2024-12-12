@@ -6,13 +6,16 @@ const User = require('../models/user'); // Modèle utilisateur
 require('dotenv').config();
 const cron = require('node-cron'); // Import de node-cron
 const notifs = express.Router();
+
 // Middleware pour analyser les requêtes JSON
 notifs.use(bodyParser.json());
+
 // Configuration Firebase
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
 // Seuils prédéfinis
 const TEMPERATURE_MIN_THRESHOLD = 15; // Seuil minimum
 const TEMPERATURE_MAX_THRESHOLD = 35; // Seuil maximum
@@ -42,7 +45,7 @@ const sendNotification = async (token, title, body) => {
 const fetchAndNotify = async () => {
   try {
     // Récupération de tous les utilisateurs
-    const users = await User.find(); // Trouver tous les utilisateurs dans la base de données
+    const users = await User.find();
 
     if (!users || users.length === 0) {
       console.log('Aucun utilisateur trouvé.');
@@ -61,9 +64,7 @@ const fetchAndNotify = async () => {
       const results = 10; // Nombre de résultats
       const response = await axios.get(
         `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-        {
-          params: { api_key: thingSpeakApiKey, results },
-        }
+        { params: { api_key: thingSpeakApiKey, results } }
       );
 
       const feeds = response.data.feeds;
@@ -86,113 +87,42 @@ const fetchAndNotify = async () => {
 
       console.log(`Température: ${temperature}°C, Humidité: ${humidity}%, Humidité du sol: ${moisture}%, NPK: ${npk}`);
 
-      // Variables pour vérifier si une notification doit être envoyée
-      let shouldSendTemperatureNotification = false;
-      let shouldSendHumidityNotification = false;
-      let shouldSendMoistureNotification = false;
-      let shouldSendNPKNotification = false;
+      const now = new Date();
+      const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getFullYear()).slice(-2)}`;
 
-      // Vérifications des seuils et gestion des alertes pour chaque donnée
+      // Vérifications et envoi des notifications
+      const alerts = [
+        { key: 'temperatureLow', condition: temperature < TEMPERATURE_MIN_THRESHOLD, message: `La température est trop basse (${temperature}°C).` },
+        { key: 'temperatureHigh', condition: temperature > TEMPERATURE_MAX_THRESHOLD, message: `La température est trop élevée (${temperature}°C).` },
+        { key: 'humidityLow', condition: humidity < HUMIDITY_MIN_THRESHOLD, message: `L'humidité est trop basse (${humidity}%).` },
+        { key: 'humidityHigh', condition: humidity > HUMIDITY_MAX_THRESHOLD, message: `L'humidité est trop élevée (${humidity}%).` },
+        { key: 'moistureLow', condition: moisture < MOISTURE_MIN_THRESHOLD, message: `L'humidité du sol est trop basse (${moisture}%).` },
+        { key: 'moistureHigh', condition: moisture > MOISTURE_MAX_THRESHOLD, message: `L'humidité du sol est trop élevée (${moisture}%).` },
+        { key: 'npkLow', condition: npk < NPK_MIN_THRESHOLD, message: `Les niveaux de NPK sont trop bas (${npk}).` },
+        { key: 'npkHigh', condition: npk > NPK_MAX_THRESHOLD, message: `Les niveaux de NPK sont trop élevés (${npk}).` },
+      ];
 
-      // Température
-      if (temperature < TEMPERATURE_MIN_THRESHOLD) {
-        if (!user.alerts.temperatureLow) {
-          shouldSendTemperatureNotification = true;
-          user.alerts.temperatureLow = true;
-          user.alerts.temperatureHigh = false;
-        }
-      } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
-        if (!user.alerts.temperatureHigh) {
-          shouldSendTemperatureNotification = true;
-          user.alerts.temperatureHigh = true;
-          user.alerts.temperatureLow = false;
-        }
-      } else {
-        if (user.alerts.temperatureLow || user.alerts.temperatureHigh) {
-          user.alerts.temperatureLow = false;
-          user.alerts.temperatureHigh = false;
+      for (const alert of alerts) {
+        if (alert.condition && !user.alerts[alert.key]) {
+          // Envoyer la notification via FCM
+          await sendNotification(Token, 'Alerte Critique', alert.message);
+
+          // Sauvegarder la notification dans la base de données
+          user.notifications.push({
+            message: alert.message,
+            date: formattedDate,
+            isRead: false,
+          });
+
+          // Mettre à jour l'état des alertes
+          user.alerts[alert.key] = true;
+        } else if (!alert.condition && user.alerts[alert.key]) {
+          user.alerts[alert.key] = false; // Réinitialiser l'état de l'alerte
         }
       }
 
-      // Humidité
-      if (humidity < HUMIDITY_MIN_THRESHOLD) {
-        if (!user.alerts.humidityLow) {
-          shouldSendHumidityNotification = true;
-          user.alerts.humidityLow = true;
-          user.alerts.humidityHigh = false;
-        }
-      } else if (humidity > HUMIDITY_MAX_THRESHOLD) {
-        if (!user.alerts.humidityHigh) {
-          shouldSendHumidityNotification = true;
-          user.alerts.humidityHigh = true;
-          user.alerts.humidityLow = false;
-        }
-      } else {
-        if (user.alerts.humidityLow || user.alerts.humidityHigh) {
-          user.alerts.humidityLow = false;
-          user.alerts.humidityHigh = false;
-        }
-      }
-
-      // Humidité du sol
-      if (moisture < MOISTURE_MIN_THRESHOLD) {
-        if (!user.alerts.moistureLow) {
-          shouldSendMoistureNotification = true;
-          user.alerts.moistureLow = true;
-          user.alerts.moistureHigh = false;
-        }
-      } else if (moisture > MOISTURE_MAX_THRESHOLD) {
-        if (!user.alerts.moistureHigh) {
-          shouldSendMoistureNotification = true;
-          user.alerts.moistureHigh = true;
-          user.alerts.moistureLow = false;
-        }
-      } else {
-        if (user.alerts.moistureLow || user.alerts.moistureHigh) {
-          user.alerts.moistureLow = false;
-          user.alerts.moistureHigh = false;
-        }
-      }
-
-      // NPK
-      if (npk < NPK_MIN_THRESHOLD) {
-        if (!user.alerts.npkLow) {
-          shouldSendNPKNotification = true;
-          user.alerts.npkLow = true;
-          user.alerts.npkHigh = false;
-        }
-      } else if (npk > NPK_MAX_THRESHOLD) {
-        if (!user.alerts.npkHigh) {
-          shouldSendNPKNotification = true;
-          user.alerts.npkHigh = true;
-          user.alerts.npkLow = false;
-        }
-      } else {
-        if (user.alerts.npkLow || user.alerts.npkHigh) {
-          user.alerts.npkLow = false;
-          user.alerts.npkHigh = false;
-        }
-      }
-
-      // Sauvegarde des modifications dans la base de données
+      // Sauvegarder les modifications de l'utilisateur
       await user.save();
-
-      // Envoi des notifications indépendantes si nécessaire
-      if (shouldSendTemperatureNotification) {
-        await sendNotification(Token, 'Température critique', `La température est ${temperature}°C.`);
-      }
-
-      if (shouldSendHumidityNotification) {
-        await sendNotification(Token, 'Humidité critique', `L'humidité est ${humidity}%.`);
-      }
-
-      if (shouldSendMoistureNotification) {
-        await sendNotification(Token, 'Humidité du sol critique', `L'humidité du sol est ${moisture}%.`);
-      }
-
-      if (shouldSendNPKNotification) {
-        await sendNotification(Token, 'Niveau NPK critique', `Les niveaux de NPK sont ${npk}.`);
-      }
     }
   } catch (error) {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
@@ -205,28 +135,28 @@ cron.schedule('* * * * *', () => {
   fetchAndNotify();
 });
 
+// Route pour tester la récupération des données
 notifs.post('/fetchData', async (req, res) => {
   try {
     const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
-    // Vérification des champs obligatoires
+
     if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
       return res.status(400).json({
-        message: 'Channel ID, API Key, Token FCM, et ID utilisateur sont requis.',
+        message: 'Channel ID, API Key, et ID utilisateur sont requis.',
       });
     }
-    // Récupération de l'utilisateur et des données
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
-    // Appel API ThingSpeak pour récupérer les données
+
     const results = 10; // Nombre de résultats
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-      {
-        params: { api_key: thingSpeakApiKey, results },
-      }
+      { params: { api_key: thingSpeakApiKey, results } }
     );
+
     res.status(200).json(response.data);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
