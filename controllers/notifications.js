@@ -26,7 +26,6 @@ const MOISTURE_MAX_THRESHOLD = 80; // Seuil maximum
 const NPK_MIN_THRESHOLD = 5; // Seuil minimum
 const NPK_MAX_THRESHOLD = 10; // Seuil maximum
 
-
 // Fonction pour envoyer une notification via FCM
 const sendNotification = async (token, title, body) => {
   const message = {
@@ -45,7 +44,8 @@ const sendNotification = async (token, title, body) => {
 // Fonction pour récupérer les données de ThingSpeak et envoyer des notifications
 const fetchAndNotify = async () => {
   try {
-    const users = await User.find(); // Trouver tous les utilisateurs dans la base de données
+    // Récupération de tous les utilisateurs
+    const users = await User.find();
 
     if (!users || users.length === 0) {
       console.log('Aucun utilisateur trouvé.');
@@ -60,12 +60,11 @@ const fetchAndNotify = async () => {
         continue; // Passer à l'utilisateur suivant si des informations manquent
       }
 
+      // Appel API ThingSpeak pour récupérer les données
       const results = 10; // Nombre de résultats
       const response = await axios.get(
         `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-        {
-          params: { api_key: thingSpeakApiKey, results },
-        }
+        { params: { api_key: thingSpeakApiKey, results } }
       );
 
       const feeds = response.data.feeds;
@@ -74,6 +73,7 @@ const fetchAndNotify = async () => {
         continue;
       }
 
+      // Dernière mesure pour chaque donnée
       const latestData = feeds[results - 1];
       const temperature = parseFloat(latestData.field1);
       const humidity = parseFloat(latestData.field2);
@@ -85,6 +85,13 @@ const fetchAndNotify = async () => {
         continue;
       }
 
+      console.log(`Température: ${temperature}°C, Humidité: ${humidity}%, Humidité du sol: ${moisture}%, NPK: ${npk}`);
+
+      const now = new Date();
+      const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getFullYear()).slice(-2)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+
+      // Vérifications et envoi des notifications
       const alerts = [
         { key: 'temperatureLow', condition: temperature < TEMPERATURE_MIN_THRESHOLD, message: `La température est trop basse (${temperature}°C).` },
         { key: 'temperatureHigh', condition: temperature > TEMPERATURE_MAX_THRESHOLD, message: `La température est trop élevée (${temperature}°C).` },
@@ -98,24 +105,24 @@ const fetchAndNotify = async () => {
 
       for (const alert of alerts) {
         if (alert.condition && !user.alerts[alert.key]) {
-          const now = new Date();
-          const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getFullYear()).slice(-2)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-
+          // Envoyer la notification via FCM
           await sendNotification(Token, 'Alerte Critique', alert.message);
 
+          // Sauvegarder la notification dans la base de données
           user.notifications.push({
             message: alert.message,
-            date: formattedDateTime, // Date avec heure
+            date: formattedDate,
             isRead: false,
           });
 
+          // Mettre à jour l'état des alertes
           user.alerts[alert.key] = true;
         } else if (!alert.condition && user.alerts[alert.key]) {
-          user.alerts[alert.key] = false;
+          user.alerts[alert.key] = false; // Réinitialiser l'état de l'alerte
         }
       }
 
+      // Sauvegarder les modifications de l'utilisateur
       await user.save();
     }
   } catch (error) {
@@ -128,6 +135,8 @@ cron.schedule('* * * * *', () => {
   console.log('Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs...');
   fetchAndNotify();
 });
+
+// Route pour tester la récupération des données
 notifs.post('/fetchData', async (req, res) => {
   try {
     const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
