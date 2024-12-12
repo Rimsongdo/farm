@@ -88,14 +88,28 @@ const fetchAndNotify = async () => {
       console.log(`Température: ${temperature}°C, Humidité: ${humidity}%, Humidité du sol: ${moisture}%, NPK: ${npk}`);
 
       const now = new Date();
-      const formattedDate = now.toLocaleString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
+      
+
+// Fonction pour formater la date en jj/mm/aa
+      function formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0'); // Ajoute un 0 si le jour est inférieur à 10
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Mois commence à 0, donc ajouter 1
+        const year = String(date.getFullYear()).slice(2); // Récupère les 2 derniers chiffres de l'année
+
+        return `${day}/${month}/${year}`;
+      }
+
+      // Fonction pour formater l'heure en hh:mm
+      function formatTime(date) {
+        const hours = String(date.getHours()).padStart(2, '0'); // Ajoute un 0 si l'heure est inférieure à 10
+        const minutes = String(date.getMinutes()).padStart(2, '0'); // Ajoute un 0 si les minutes sont inférieures à 10
+
+        return `${hours}:${minutes}`;
+      }
+
+// Combine la date et l'heure dans une seule variable
+    const formattedDate = `${formatDate(now)} ${formatTime(now)}`;
+
 
 
       // Vérifications et envoi des notifications
