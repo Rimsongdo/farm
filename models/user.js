@@ -51,6 +51,9 @@ const userSchema = new mongoose.Schema({
     npkLow: { type: Boolean, default: false },
     npkHigh: { type: Boolean, default: false },
   },
+  notifications:{
+    type:[String], default:null
+  }
 },{
   collection: 'Farmers' // Nom de la collection personnalisée
 });
