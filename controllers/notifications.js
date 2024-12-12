@@ -186,4 +186,24 @@ notifs.post('/fetchData', async (req, res) => {
   }
 });
 
+notifs.post('/getNotifications', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    // Récupérer l'utilisateur dans la base de données
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Récupérer les notifications non lues
+    const unreadNotifications = user.notifications.filter(notif => !notif.isRead);
+
+    res.status(200).json({ notifications: unreadNotifications });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des notifications :', error.message);
+    res.status(500).json({ message: 'Erreur lors de la récupération des notifications.' });
+  }
+});
+
 module.exports = notifs;
