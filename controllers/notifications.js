@@ -26,18 +26,6 @@ const MOISTURE_MAX_THRESHOLD = 80; // Seuil maximum
 const NPK_MIN_THRESHOLD = 5; // Seuil minimum
 const NPK_MAX_THRESHOLD = 10; // Seuil maximum
 
-// Fonction pour formater la date et l'heure
-const formatDateTime = () => {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // Les mois commencent à 0
-  const year = now.getFullYear();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-};
 
 // Fonction pour envoyer une notification via FCM
 const sendNotification = async (token, title, body) => {
@@ -110,7 +98,9 @@ const fetchAndNotify = async () => {
 
       for (const alert of alerts) {
         if (alert.condition && !user.alerts[alert.key]) {
-          const formattedDateTime = formatDateTime();
+          const now = new Date();
+          const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getFullYear()).slice(-2)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
 
           await sendNotification(Token, 'Alerte Critique', alert.message);
 
@@ -137,6 +127,33 @@ const fetchAndNotify = async () => {
 cron.schedule('* * * * *', () => {
   console.log('Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs...');
   fetchAndNotify();
+});
+notifs.post('/fetchData', async (req, res) => {
+  try {
+    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
+
+    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
+      return res.status(400).json({
+        message: 'Channel ID, API Key, et ID utilisateur sont requis.',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    const results = 10; // Nombre de résultats
+    const response = await axios.get(
+      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
+      { params: { api_key: thingSpeakApiKey, results } }
+    );
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données :', error.message);
+    res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
+  }
 });
 
 module.exports = notifs;

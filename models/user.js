@@ -32,30 +32,3 @@ const userSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('User', userSchema);
-notifs.post('/fetchData', async (req, res) => {
-  try {
-    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
-
-    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
-      return res.status(400).json({
-        message: 'Channel ID, API Key, et ID utilisateur sont requis.',
-      });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-    }
-
-    const results = 10; // Nombre de résultats
-    const response = await axios.get(
-      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-      { params: { api_key: thingSpeakApiKey, results } }
-    );
-
-    res.status(200).json(response.data);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des données :', error.message);
-    res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
-  }
-});
