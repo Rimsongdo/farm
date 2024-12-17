@@ -227,7 +227,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
       { params: { api_key: thingSpeakApiKey, results } }
     );
 
-    res.status(200).json(response.data);
+    res.status(200).json(response.data.feeds);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
