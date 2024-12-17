@@ -237,7 +237,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
 
     // Combiner les entêtes et les valeurs pour former le CSV final
     const csv = `${valuesLine}`;
-    const predictions=axios.post('https://z76194ln8k.execute-api.us-east-1.amazonaws.com/stage_1/predire', csv, {
+    const predictions=axios.post('https://k0yahuavu4.execute-api.us-east-1.amazonaws.com/stage_1/predire', csv, {
       headers: {
           'Content-Type': 'text/csv',  // Indiquer que le contenu est du CSV
       }
