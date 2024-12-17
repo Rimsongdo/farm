@@ -237,8 +237,12 @@ notifs.post('/fetchPrediction', async (req, res) => {
 
     // Combiner les entêtes et les valeurs pour former le CSV final
     const csv = `${valuesLine}`;
-
-    res.status(200).send(csv);
+    const predictions=axios.post('https://z76194ln8k.execute-api.us-east-1.amazonaws.com/stage_1/predire', csv, {
+      headers: {
+          'Content-Type': 'text/csv',  // Indiquer que le contenu est du CSV
+      }
+  })
+    res.status(200).send(predictions);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
