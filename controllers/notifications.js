@@ -206,4 +206,42 @@ notifs.post('/getNotifications', async (req, res) => {
   }
 });
 
+notifs.post('/getPrediction',async (req,res)=>{
+  try{
+    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
+
+    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
+      return res.status(400).json({
+        message: 'Channel ID, API Key, et ID utilisateur sont requis.',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    const results = 1; // Nombre de résultats
+    const response = await axios.get(
+      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
+      { params: { api_key: thingSpeakApiKey, results } }
+    );
+    const laData=response.feeds[0];
+    const headersOrder = ["field3", "field1", "field2"];
+    const headerLine = headersOrder.join(",");
+
+    // Créer la ligne suivante avec les valeurs dans le même ordre que headersOrder
+    const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
+
+    // Combiner les entêtes et les valeurs pour former le CSV final
+    const csv = `${headerLine}\n${valuesLine}`;
+    res.json(csv)
+
+  }
+  catch(e){
+    res.json(e);
+  }
+  
+})
+
 module.exports = notifs;
