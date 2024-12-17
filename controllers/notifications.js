@@ -221,7 +221,7 @@ notifs.post('/getPrediction',async (req,res)=>{
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    const results = 1; // Nombre de résultats
+    const results = 10; // Nombre de résultats
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results } }
