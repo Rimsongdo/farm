@@ -210,24 +210,33 @@ notifs.post('/fetchPrediction', async (req, res) => {
   try {
     const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
 
+    // Vérification des paramètres requis
     if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
       return res.status(400).json({
         message: 'Channel ID, API Key, et ID utilisateur sont requis.',
       });
     }
 
+    // Recherche de l'utilisateur dans la base de données
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    const results = 1; // Nombre de résultats
+    // Récupération des données depuis ThingSpeak
+    const results = 1; // Nombre de résultats à récupérer
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results } }
     );
-    const jsonData=response.data.feeds[0]
+
+    const jsonData = response.data.feeds[0];
+
+    // Vérification si les données existent dans jsonData
     const headersOrder = ["field3", "field1", "field2"];
+    if (!headersOrder.every(field => field in jsonData)) {
+      return res.status(400).json({ message: 'Certaines données sont manquantes dans la réponse de ThingSpeak.' });
+    }
 
     // Créer la première ligne avec les entêtes dans l'ordre souhaité
     const headerLine = headersOrder.join(",");
@@ -236,15 +245,36 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
 
     // Combiner les entêtes et les valeurs pour former le CSV final
-    const csv = `${valuesLine}`;
-    const predictions=await axios.post('https://k0yahuavu4.execute-api.us-east-1.amazonaws.com/stage_1/predire', csv, {
-      headers: {
+    const csv = `${headerLine}\n${valuesLine}`;
+
+    // Log des données CSV avant l'envoi
+    console.log("CSV envoyé:", csv);
+
+    // Envoi du CSV au service de prédiction
+    const predictions = await axios.post(
+      'https://k0yahuavu4.execute-api.us-east-1.amazonaws.com/stage_1/predire', 
+      csv, 
+      {
+        headers: {
           'Content-Type': 'text/csv',  // Indiquer que le contenu est du CSV
+        }
       }
-  })
-    res.status(200).send(predictions);
+    );
+
+    // Log de la réponse du service de prédiction
+    console.log("Réponse du service de prédiction:", predictions.data);
+
+    // Retourner les prédictions du service
+    res.status(200).send(predictions.data);
   } catch (error) {
+    // Log des erreurs pour débogage
     console.error('Erreur lors de la récupération des données :', error.message);
+
+    // Affichage de la réponse d'erreur si disponible
+    if (error.response) {
+      console.error('Réponse d\'erreur du serveur:', error.response.data);
+    }
+
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
   }
 });
