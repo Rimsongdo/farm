@@ -231,10 +231,11 @@ notifs.post('/getPrediction',async (req,res)=>{
     const headerLine = headersOrder.join(",");
 
     // Créer la ligne suivante avec les valeurs dans le même ordre que headersOrder
-    const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
+    const valuesLine = headersOrder.map(header => laData[header]).join(",");
 
     // Combiner les entêtes et les valeurs pour former le CSV final
     const csv = `${headerLine}\n${valuesLine}`;
+    
     res.json(csv)
 
   }
