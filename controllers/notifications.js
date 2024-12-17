@@ -245,7 +245,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
 
     // Combiner les entêtes et les valeurs pour former le CSV final
-    const csv = `${headerLine}\n${valuesLine}`;
+    const csv = `${valuesLine}`;
 
     // Log des données CSV avant l'envoi
     console.log("CSV envoyé:", csv);
