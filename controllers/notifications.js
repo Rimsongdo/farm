@@ -226,8 +226,8 @@ notifs.post('/fetchPrediction', async (req, res) => {
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results } }
     );
-
-    res.status(200).json(response.data.feeds);
+    const jsonData=response.data.feeds[0]
+    res.status(200).json(jsonData);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
