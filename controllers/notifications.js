@@ -235,8 +235,8 @@ notifs.post('/getPrediction',async (req,res)=>{
 
     // Combiner les entêtes et les valeurs pour former le CSV final
     const csv = `${headerLine}\n${valuesLine}`;
-    
-    res.json(csv)
+    const donnee=laData.field3
+    res.json(donnee)
 
   }
   catch(e){
