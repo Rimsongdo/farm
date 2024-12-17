@@ -227,7 +227,18 @@ notifs.post('/fetchPrediction', async (req, res) => {
       { params: { api_key: thingSpeakApiKey, results } }
     );
     const jsonData=response.data.feeds[0]
-    res.status(200).json(jsonData);
+    const headersOrder = ["field3", "fied1", "field2"];
+
+    // Créer la première ligne avec les entêtes dans l'ordre souhaité
+    const headerLine = headersOrder.join(",");
+
+    // Créer la ligne suivante avec les valeurs dans le même ordre que headersOrder
+    const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
+
+    // Combiner les entêtes et les valeurs pour former le CSV final
+    const csv = `${headerLine}\n${valuesLine}`;
+
+    res.status(200).send(csv);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
