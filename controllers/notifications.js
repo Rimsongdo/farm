@@ -206,8 +206,8 @@ notifs.post('/getNotifications', async (req, res) => {
   }
 });
 
-notifs.post('/getPrediction',async (req,res)=>{
-  try{
+notifs.post('/fetchPrediction', async (req, res) => {
+  try {
     const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
 
     if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
@@ -221,28 +221,19 @@ notifs.post('/getPrediction',async (req,res)=>{
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    const results = 10; // Nombre de résultats
+    const results = 1; // Nombre de résultats
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results } }
     );
-    const laData=response.feeds[0];
-    const headersOrder = ["field3", "field1", "field2"];
-    const headerLine = headersOrder.join(",");
 
-    // Créer la ligne suivante avec les valeurs dans le même ordre que headersOrder
-    const valuesLine = headersOrder.map(header => laData[header]).join(",");
-
-    // Combiner les entêtes et les valeurs pour former le CSV final
-    const csv = `${headerLine}\n${valuesLine}`;
-    const donnee=laData.field3
-    res.json(response)
-
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données :', error.message);
+    res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
   }
-  catch(e){
-    res.json(e);
-  }
-  
-})
+});
+
+
 
 module.exports = notifs;
