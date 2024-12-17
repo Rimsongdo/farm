@@ -227,7 +227,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
       { params: { api_key: thingSpeakApiKey, results } }
     );
     const jsonData=response.data.feeds[0]
-    const headersOrder = ["field3", "fied1", "field2"];
+    const headersOrder = ["field3", "field1", "field2"];
 
     // Créer la première ligne avec les entêtes dans l'ordre souhaité
     const headerLine = headersOrder.join(",");
@@ -236,7 +236,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
 
     // Combiner les entêtes et les valeurs pour former le CSV final
-    const csv = `${headerLine}\n${valuesLine}`;
+    const csv = `${valuesLine}`;
 
     res.status(200).send(csv);
   } catch (error) {
