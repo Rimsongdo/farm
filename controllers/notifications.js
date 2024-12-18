@@ -187,37 +187,37 @@ const fetchAndNotify = async () => {
             title: 'Température basse',
             body: `La température est tombée à ${temperature}°C.`,
           };
-        } else if (temperature > TEMPERATURE_MAX_THRESHOLD) {
+        } if (temperature > TEMPERATURE_MAX_THRESHOLD) {
           alertType = {
             title: 'Température élevée',
             body: `La température a atteint ${temperature}°C.`,
           };
-        } else if (humidity < HUMIDITY_MIN_THRESHOLD) {
+        } if (humidity < HUMIDITY_MIN_THRESHOLD) {
           alertType = {
             title: 'Humidité air basse',
             body: `L'humidité air est tombée à ${humidity}%.`,
           };
-        } else if (humidity > HUMIDITY_MAX_THRESHOLD) {
+        } if (humidity > HUMIDITY_MAX_THRESHOLD) {
           alertType = {
             title: 'Humidité air élevée',
             body: `L'humidité air a atteint ${humidity}%.`,
           };
-        } else if (moisture < MOISTURE_MIN_THRESHOLD) {
+        } if (moisture < MOISTURE_MIN_THRESHOLD) {
           alertType = {
             title: 'Humidité du sol basse',
             body: `L'humidité du sol est tombée à ${moisture}%.`,
           };
-        } else if (moisture > MOISTURE_MAX_THRESHOLD) {
+        } if (moisture > MOISTURE_MAX_THRESHOLD) {
           alertType = {
             title: 'Humidité du sol élevée',
             body: `L'humidité du sol a atteint ${moisture}%.`,
           };
-        } else if (npk < NPK_MIN_THRESHOLD) {
+        } if (npk < NPK_MIN_THRESHOLD) {
           alertType = {
             title: 'NPK faible',
             body: `Les niveaux de NPK sont tombés à ${npk}.`,
           };
-        } else if (npk > NPK_MAX_THRESHOLD) {
+        } if (npk > NPK_MAX_THRESHOLD) {
           alertType = {
             title: 'NPK élevé',
             body: `Les niveaux de NPK ont atteint ${npk}.`,
