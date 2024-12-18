@@ -130,7 +130,7 @@ const fetchAndNotify = async () => {
           await sendNotification(Token, 'Alerte Critique', alert.message);
 
           // Sauvegarder la notification dans la base de données
-          user.notifications.push({
+          await user.notifications.push({
             message: alert.message,
             date: formattedDate,
             isRead: false,
