@@ -91,7 +91,7 @@ const fetchAndNotify = async () => {
 
       console.log(`Température: ${data.temperature}°C, Humidité: ${data.humidity}%, Humidité du sol: ${data.moisture}%, NPK: ${data.npk}`);
 
-      // Traitement des alertes
+      // Traitement des alertes avec la logique d'activation/désactivation opposée
       await processAlert(user, 'temperature', data.temperature, TEMPERATURE_MIN_THRESHOLD, TEMPERATURE_MAX_THRESHOLD, 'Température');
       await processAlert(user, 'humidity', data.humidity, HUMIDITY_MIN_THRESHOLD, HUMIDITY_MAX_THRESHOLD, 'Humidité air');
       await processAlert(user, 'moisture', data.moisture, MOISTURE_MIN_THRESHOLD, MOISTURE_MAX_THRESHOLD, 'Humidité du sol');
@@ -102,20 +102,24 @@ const fetchAndNotify = async () => {
   }
 };
 
-// Fonction pour traiter les alertes
+// Fonction pour traiter les alertes avec la logique de désactivation opposée
 const processAlert = async (user, field, value, minThreshold, maxThreshold, label) => {
   const alertFieldLow = `${field}Low`;
   const alertFieldHigh = `${field}High`;
 
+  // Si la valeur est en dehors du seuil, activer l'alerte correspondante et désactiver l'opposée
   if (value < minThreshold && !user.alerts[alertFieldLow]) {
     user.alerts[alertFieldLow] = true;
+    user.alerts[alertFieldHigh] = false;  // Désactiver l'alerte opposée
     await user.save();
     await sendNotification(user.Token, `${label} basse`, `${label} est tombée à ${value}.`);
   } else if (value > maxThreshold && !user.alerts[alertFieldHigh]) {
     user.alerts[alertFieldHigh] = true;
+    user.alerts[alertFieldLow] = false;  // Désactiver l'alerte opposée
     await user.save();
     await sendNotification(user.Token, `${label} élevée`, `${label} a atteint ${value}.`);
   } else if (value >= minThreshold && value <= maxThreshold) {
+    // Si la valeur est dans la plage normale, réinitialiser les deux alertes
     user.alerts[alertFieldLow] = false;
     user.alerts[alertFieldHigh] = false;
     await user.save();
