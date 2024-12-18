@@ -75,28 +75,6 @@ const fetchAndNotify = async () => {
         console.log('Aucune donnée disponible pour l\'utilisateur', user._id);
         continue;
       }
-      const now = new Date();
-      
-
-// Fonction pour formater la date en jj/mm/aa
-      function formatDate(date) {
-        const day = String(date.getDate()).padStart(2, '0'); // Ajoute un 0 si le jour est inférieur à 10
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Mois commence à 0, donc ajouter 1
-        const year = String(date.getFullYear()).slice(2); // Récupère les 2 derniers chiffres de l'année
-
-        return `${day}/${month}/${year}`;
-      }
-
-      // Fonction pour formater l'heure en hh:mm
-      function formatTime(date) {
-        const hours = String(date.getHours()).padStart(2, '0'); // Ajoute un 0 si l'heure est inférieure à 10
-        const minutes = String(date.getMinutes()).padStart(2, '0'); // Ajoute un 0 si les minutes sont inférieures à 10
-
-        return `${hours}:${minutes}`;
-      }
-
-// Combine la date et l'heure dans une seule variable
-    const formattedDate = `${formatDate(now)} ${formatTime(now)}`;
 
       // Dernière mesure pour chaque donnée
       const latestData = feeds[results - 1];
@@ -115,24 +93,12 @@ const fetchAndNotify = async () => {
       // Envoi de notifications en fonction des seuils
       if (temperature < TEMPERATURE_MIN_THRESHOLD && !user.alerts.temperatureLow) {
         user.alerts.temperatureLow = true;
-        const newNotification = {
-          message: `La température est tombée à ${temperature}°C.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `La température est tombée à ${temperature}°C.`);
+        await sendNotification(Token, 'Température basse', `La température est tombée à ${temperature}°C.`);
       } else if (temperature > TEMPERATURE_MAX_THRESHOLD && !user.alerts.temperatureHigh) {
         user.alerts.temperatureHigh = true;
-        const newNotification = {
-          message: `La température est monté à ${temperature}°C.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `La température a atteint ${temperature}°C.`);
+        await sendNotification(Token, 'Température élevée', `La température a atteint ${temperature}°C.`);
       } else if (temperature >= TEMPERATURE_MIN_THRESHOLD && temperature <= TEMPERATURE_MAX_THRESHOLD) {
         user.alerts.temperatureLow = false;
         user.alerts.temperatureHigh = false;
@@ -141,24 +107,12 @@ const fetchAndNotify = async () => {
 
       if (humidity < HUMIDITY_MIN_THRESHOLD && !user.alerts.humidityLow) {
         user.alerts.humidityLow = true;
-        const newNotification = {
-          message: `L'humidité de l'air est tombée à ${humidity}°%.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `L'humidité de l'air est tombée à ${humidity}%.`);
+        await sendNotification(Token, 'Humidité air basse', `L'humidité air est tombée à ${humidity}%.`);
       } else if (humidity > HUMIDITY_MAX_THRESHOLD && !user.alerts.humidityHigh) {
         user.alerts.humidityHigh = true;
-        const newNotification = {
-          message: `L'humidité de l'air a atteint ${humidity}°%.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `L'humidité air a atteint ${humidity}%.`);
+        await sendNotification(Token, 'Humidité air élevée', `L'humidité air a atteint ${humidity}%.`);
       } else if (humidity >= HUMIDITY_MIN_THRESHOLD && humidity <= HUMIDITY_MAX_THRESHOLD) {
         user.alerts.humidityLow = false;
         user.alerts.humidityHigh = false;
