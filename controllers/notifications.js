@@ -45,8 +45,8 @@ const sendNotification = async (token, title, body) => {
 // Fonction pour récupérer les données de ThingSpeak et envoyer des notifications
 const fetchAndNotify = async () => {
   try {
-    // Récupération de tous les utilisateurs
-    const users = await User.find(); // Trouver tous les utilisateurs dans la base de données
+    // Récupérer tous les utilisateurs
+    const users = await User.find();
 
     if (!users || users.length === 0) {
       console.log('Aucun utilisateur trouvé.');
@@ -55,20 +55,18 @@ const fetchAndNotify = async () => {
 
     for (let user of users) {
       const { thingSpeakChannelId, thingSpeakApiKey, Token } = user;
-      
+
+      // Vérifier les informations manquantes
       if (!thingSpeakChannelId || !thingSpeakApiKey || !Token) {
         console.log(`Informations manquantes pour l'utilisateur ${user._id}`);
-        continue; // Passer à l'utilisateur suivant si des informations manquent
+        continue;
       }
 
-      // Appel API ThingSpeak pour récupérer les données
-      const results = 10; // Nombre de résultats
-      const response = await axios.get(
-        `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-        {
-          params: { api_key: thingSpeakApiKey, results },
-        }
-      );
+      // Récupérer les données depuis ThingSpeak
+      const results = 10;
+      const response = await axios.get(`https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`, {
+        params: { api_key: thingSpeakApiKey, results }
+      });
 
       const feeds = response.data.feeds;
       if (feeds.length === 0) {
@@ -76,79 +74,51 @@ const fetchAndNotify = async () => {
         continue;
       }
 
-      // Dernière mesure pour chaque donnée
+      // Extraire la dernière donnée
       const latestData = feeds[results - 1];
-      const temperature = parseFloat(latestData.field1);
-      const humidity = parseFloat(latestData.field2);
-      const moisture = parseFloat(latestData.field3);
-      const npk = parseFloat(latestData.field4);
+      const data = {
+        temperature: parseFloat(latestData.field1),
+        humidity: parseFloat(latestData.field2),
+        moisture: parseFloat(latestData.field3),
+        npk: parseFloat(latestData.field4)
+      };
 
-      if (isNaN(temperature) || isNaN(humidity) || isNaN(moisture) || isNaN(npk)) {
+      // Vérifier la validité des données
+      if (Object.values(data).some(isNaN)) {
         console.log('Données invalides pour l\'utilisateur', user._id);
         continue;
       }
 
-      console.log(`Température: ${temperature}°C, Humidité: ${humidity}%, Humidité du sol: ${moisture}%, NPK: ${npk}`);
+      console.log(`Température: ${data.temperature}°C, Humidité: ${data.humidity}%, Humidité du sol: ${data.moisture}%, NPK: ${data.npk}`);
 
-      // Envoi de notifications en fonction des seuils
-      if (temperature < TEMPERATURE_MIN_THRESHOLD && !user.alerts.temperatureLow) {
-        user.alerts.temperatureLow = true;
-        await user.save();
-        await sendNotification(Token, 'Température basse', `La température est tombée à ${temperature}°C.`);
-      } else if (temperature > TEMPERATURE_MAX_THRESHOLD && !user.alerts.temperatureHigh) {
-        user.alerts.temperatureHigh = true;
-        await user.save();
-        await sendNotification(Token, 'Température élevée', `La température a atteint ${temperature}°C.`);
-      } else if (temperature >= TEMPERATURE_MIN_THRESHOLD && temperature <= TEMPERATURE_MAX_THRESHOLD) {
-        user.alerts.temperatureLow = false;
-        user.alerts.temperatureHigh = false;
-        await user.save();
-      }
-
-      if (humidity < HUMIDITY_MIN_THRESHOLD && !user.alerts.humidityLow) {
-        user.alerts.humidityLow = true;
-        await user.save();
-        await sendNotification(Token, 'Humidité air basse', `L'humidité air est tombée à ${humidity}%.`);
-      } else if (humidity > HUMIDITY_MAX_THRESHOLD && !user.alerts.humidityHigh) {
-        user.alerts.humidityHigh = true;
-        await user.save();
-        await sendNotification(Token, 'Humidité air élevée', `L'humidité air a atteint ${humidity}%.`);
-      } else if (humidity >= HUMIDITY_MIN_THRESHOLD && humidity <= HUMIDITY_MAX_THRESHOLD) {
-        user.alerts.humidityLow = false;
-        user.alerts.humidityHigh = false;
-        await user.save();
-      }
-
-      if (moisture < MOISTURE_MIN_THRESHOLD && !user.alerts.moistureLow) {
-        user.alerts.moistureLow = true;
-        await user.save();
-        await sendNotification(Token, 'Humidité du sol basse', `L'humidité du sol est tombée à ${moisture}%.`);
-      } else if (moisture > MOISTURE_MAX_THRESHOLD && !user.alerts.moistureHigh) {
-        user.alerts.moistureHigh = true;
-        await user.save();
-        await sendNotification(Token, 'Humidité du sol élevée', `L'humidité du sol a atteint ${moisture}%.`);
-      } else if (moisture >= MOISTURE_MIN_THRESHOLD && moisture <= MOISTURE_MAX_THRESHOLD) {
-        user.alerts.moistureLow = false;
-        user.alerts.moistureHigh = false;
-        await user.save();
-      }
-
-      if (npk < NPK_MIN_THRESHOLD && !user.alerts.npkLow) {
-        user.alerts.npkLow = true;
-        await user.save();
-        await sendNotification(Token, 'NPK faible', `Les niveaux de NPK sont tombés à ${npk}.`);
-      } else if (npk > NPK_MAX_THRESHOLD && !user.alerts.npkHigh) {
-        user.alerts.npkHigh = true;
-        await user.save();
-        await sendNotification(Token, 'NPK élevé', `Les niveaux de NPK ont atteint ${npk}.`);
-      } else if (npk >= NPK_MIN_THRESHOLD && npk <= NPK_MAX_THRESHOLD) {
-        user.alerts.npkLow = false;
-        user.alerts.npkHigh = false;
-        await user.save();
-      }
+      // Traitement des alertes
+      await processAlert(user, 'temperature', data.temperature, TEMPERATURE_MIN_THRESHOLD, TEMPERATURE_MAX_THRESHOLD, 'Température');
+      await processAlert(user, 'humidity', data.humidity, HUMIDITY_MIN_THRESHOLD, HUMIDITY_MAX_THRESHOLD, 'Humidité air');
+      await processAlert(user, 'moisture', data.moisture, MOISTURE_MIN_THRESHOLD, MOISTURE_MAX_THRESHOLD, 'Humidité du sol');
+      await processAlert(user, 'npk', data.npk, NPK_MIN_THRESHOLD, NPK_MAX_THRESHOLD, 'NPK');
     }
   } catch (error) {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
+  }
+};
+
+// Fonction pour traiter les alertes
+const processAlert = async (user, field, value, minThreshold, maxThreshold, label) => {
+  const alertFieldLow = `${field}Low`;
+  const alertFieldHigh = `${field}High`;
+
+  if (value < minThreshold && !user.alerts[alertFieldLow]) {
+    user.alerts[alertFieldLow] = true;
+    await user.save();
+    await sendNotification(user.Token, `${label} basse`, `${label} est tombée à ${value}.`);
+  } else if (value > maxThreshold && !user.alerts[alertFieldHigh]) {
+    user.alerts[alertFieldHigh] = true;
+    await user.save();
+    await sendNotification(user.Token, `${label} élevée`, `${label} a atteint ${value}.`);
+  } else if (value >= minThreshold && value <= maxThreshold) {
+    user.alerts[alertFieldLow] = false;
+    user.alerts[alertFieldHigh] = false;
+    await user.save();
   }
 };
 
