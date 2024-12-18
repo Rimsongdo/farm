@@ -128,23 +128,28 @@ const fetchAndNotify = async () => {
         if (alert.condition && !user.alerts[alert.key]) {
           // Envoyer la notification via FCM
           await sendNotification(Token, 'Alerte Critique', alert.message);
-
+      
           // Sauvegarder la notification dans la base de données
-          await user.notifications.push({
+          const newNotification = {
             message: alert.message,
             date: formattedDate,
             isRead: false,
-          });
-
+          };
+      
+          console.log('Notification à ajouter:', newNotification);
+          user.notifications.push(newNotification);
+      
           // Mettre à jour l'état des alertes
           user.alerts[alert.key] = true;
         } else if (!alert.condition && user.alerts[alert.key]) {
-          user.alerts[alert.key] = false; // Réinitialiser l'état de l'alerte
+          // Réinitialiser l'état de l'alerte
+          user.alerts[alert.key] = false;
         }
       }
-
+      
       // Sauvegarder les modifications de l'utilisateur
       await user.save();
+      
     }
   } catch (error) {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
