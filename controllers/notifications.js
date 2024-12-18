@@ -77,21 +77,26 @@ const fetchAndNotify = async () => {
       }
       const now = new Date();
       
-      // Fonction pour formater la date et l'heure
+
+// Fonction pour formater la date en jj/mm/aa
       function formatDate(date) {
-        const day = String(date.getDate()).padStart(2, '0'); 
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = String(date.getFullYear()).slice(2);
+        const day = String(date.getDate()).padStart(2, '0'); // Ajoute un 0 si le jour est inférieur à 10
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Mois commence à 0, donc ajouter 1
+        const year = String(date.getFullYear()).slice(2); // Récupère les 2 derniers chiffres de l'année
+
         return `${day}/${month}/${year}`;
       }
 
+      // Fonction pour formater l'heure en hh:mm
       function formatTime(date) {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0'); // Ajoute un 0 si l'heure est inférieure à 10
+        const minutes = String(date.getMinutes()).padStart(2, '0'); // Ajoute un 0 si les minutes sont inférieures à 10
+
         return `${hours}:${minutes}`;
       }
 
-      const formattedDate = `${formatDate(now)} ${formatTime(now)}`;
+// Combine la date et l'heure dans une seule variable
+    const formattedDate = `${formatDate(now)} ${formatTime(now)}`;
 
       // Dernière mesure pour chaque donnée
       const latestData = feeds[results - 1];
@@ -107,7 +112,7 @@ const fetchAndNotify = async () => {
 
       console.log(`Température: ${temperature}°C, Humidité: ${humidity}%, Humidité du sol: ${moisture}%, NPK: ${npk}`);
 
-      // **Notification pour la température**
+      // Envoi de notifications en fonction des seuils
       if (temperature < TEMPERATURE_MIN_THRESHOLD && !user.alerts.temperatureLow) {
         user.alerts.temperatureLow = true;
         const newNotification = {
@@ -121,94 +126,67 @@ const fetchAndNotify = async () => {
       } else if (temperature > TEMPERATURE_MAX_THRESHOLD && !user.alerts.temperatureHigh) {
         user.alerts.temperatureHigh = true;
         const newNotification = {
-          message: `Température élevée : ${temperature}°C.`,
+          message: `La température est monté à ${temperature}°C.`,
           date: formattedDate,
           isRead: false,
         };
         user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Température élevée : ${temperature}°C.`);
+        await sendNotification(Token, `La température a atteint ${temperature}°C.`);
       } else if (temperature >= TEMPERATURE_MIN_THRESHOLD && temperature <= TEMPERATURE_MAX_THRESHOLD) {
         user.alerts.temperatureLow = false;
         user.alerts.temperatureHigh = false;
         await user.save();
       }
 
-      // **Notification pour l'humidité de l'air**
       if (humidity < HUMIDITY_MIN_THRESHOLD && !user.alerts.humidityLow) {
         user.alerts.humidityLow = true;
         const newNotification = {
-          message: `L'humidité de l'air est tombée à ${humidity}%.`,
+          message: `L'humidité de l'air est tombée à ${humidity}°%.`,
           date: formattedDate,
           isRead: false,
         };
         user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Humidité de l'air faible: ${humidity}%.`);
+        await sendNotification(Token, `L'humidité de l'air est tombée à ${humidity}%.`);
       } else if (humidity > HUMIDITY_MAX_THRESHOLD && !user.alerts.humidityHigh) {
         user.alerts.humidityHigh = true;
         const newNotification = {
-          message: `Humidité de l'air élevée : ${humidity}%.`,
+          message: `L'humidité de l'air a atteint ${humidity}°%.`,
           date: formattedDate,
           isRead: false,
         };
         user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Humidité de l'air élevée: ${humidity}%.`);
+        await sendNotification(Token, `L'humidité air a atteint ${humidity}%.`);
       } else if (humidity >= HUMIDITY_MIN_THRESHOLD && humidity <= HUMIDITY_MAX_THRESHOLD) {
         user.alerts.humidityLow = false;
         user.alerts.humidityHigh = false;
         await user.save();
       }
 
-      // **Notification pour l'humidité du sol (moisture)**
       if (moisture < MOISTURE_MIN_THRESHOLD && !user.alerts.moistureLow) {
         user.alerts.moistureLow = true;
-        const newNotification = {
-          message: `L'humidité du sol est tombée à ${moisture}%.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Humidité du sol faible: ${moisture}%.`);
+        await sendNotification(Token, 'Humidité du sol basse', `L'humidité du sol est tombée à ${moisture}%.`);
       } else if (moisture > MOISTURE_MAX_THRESHOLD && !user.alerts.moistureHigh) {
         user.alerts.moistureHigh = true;
-        const newNotification = {
-          message: `Humidité du sol élevée : ${moisture}%.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Humidité du sol élevée: ${moisture}%.`);
+        await sendNotification(Token, 'Humidité du sol élevée', `L'humidité du sol a atteint ${moisture}%.`);
       } else if (moisture >= MOISTURE_MIN_THRESHOLD && moisture <= MOISTURE_MAX_THRESHOLD) {
         user.alerts.moistureLow = false;
         user.alerts.moistureHigh = false;
         await user.save();
       }
 
-      // **Notification pour les niveaux de NPK**
       if (npk < NPK_MIN_THRESHOLD && !user.alerts.npkLow) {
         user.alerts.npkLow = true;
-        const newNotification = {
-          message: `Les niveaux de NPK sont tombés à ${npk}.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Niveaux de NPK faible: ${npk}.`);
+        await sendNotification(Token, 'NPK faible', `Les niveaux de NPK sont tombés à ${npk}.`);
       } else if (npk > NPK_MAX_THRESHOLD && !user.alerts.npkHigh) {
         user.alerts.npkHigh = true;
-        const newNotification = {
-          message: `Les niveaux de NPK ont atteint ${npk}.`,
-          date: formattedDate,
-          isRead: false,
-        };
-        user.notifications.push(newNotification);
         await user.save();
-        await sendNotification(Token, `Niveaux de NPK élevé: ${npk}.`);
+        await sendNotification(Token, 'NPK élevé', `Les niveaux de NPK ont atteint ${npk}.`);
       } else if (npk >= NPK_MIN_THRESHOLD && npk <= NPK_MAX_THRESHOLD) {
         user.alerts.npkLow = false;
         user.alerts.npkHigh = false;
@@ -219,7 +197,6 @@ const fetchAndNotify = async () => {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
   }
 };
-
 
 
 // Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs
