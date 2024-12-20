@@ -207,6 +207,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     );
 
     const jsonData = response.data.feeds[0];
+    res.status(200).send(jsonData);
     donnee={
       soil_humidity_2:jsonData.field3,
       air_temperature:jsonData.field1,
@@ -225,7 +226,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     console.log("Réponse du service de prédiction:", predictions.prediction);
 
     // Retourner les prédictions du service
-    res.status(200).send(predictions);
+    //res.status(200).send(predictions);
   } catch (error) {
     // Log des erreurs pour débogage
     console.error('Erreur lors de la récupération des données :', error.message);
