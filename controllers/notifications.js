@@ -208,7 +208,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
 
     const jsonData = response.data.feeds[0];
     res.status(200).json(response);
-    /*donnee={
+    donnee={
       soil_humidity_2:jsonData.field3,
       air_temperature:jsonData.field1,
       air_humidity:jsonData.field2
@@ -217,7 +217,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const predictions = await axios.post(
       'https://farmpred-mt5y.onrender.com/predict', 
       donnee, 
-    );*/
+    );
 
    
   } catch (error) {
