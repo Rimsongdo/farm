@@ -199,14 +199,14 @@ notifs.post('/fetchPrediction', async (req, res) => {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-   /*
+   
     const nombreResult = 2; 
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results:nombreResult } }
     );
 
-    const jsonData = response.data.feeds[0];*/
+    const jsonData = response.data.feeds[0];
     
     donnee={
       soil_humidity_2:60,
