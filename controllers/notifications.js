@@ -207,7 +207,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     );
 
     const jsonData = response.data.feeds[0];
-    res.status(200).json(response);
+    
     donnee={
       soil_humidity_2:jsonData.field3,
       air_temperature:jsonData.field1,
@@ -218,17 +218,9 @@ notifs.post('/fetchPrediction', async (req, res) => {
       'https://farmpred-mt5y.onrender.com/predict', 
       donnee, 
     );
-
+    res.status(200).json(response);
    
   } catch (error) {
-    // Log des erreurs pour débogage
-    console.error('Erreur lors de la récupération des données :', error.message);
-
-    // Affichage de la réponse d'erreur si disponible
-    if (error.response) {
-      console.error('Réponse d\'erreur du serveur:', error.response.data);
-    }
-
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
   }
 });
