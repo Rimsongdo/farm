@@ -207,41 +207,25 @@ notifs.post('/fetchPrediction', async (req, res) => {
     );
 
     const jsonData = response.data.feeds[0];
-
+    donnee={
+      soil_humidity_2:jsonData.field3,
+      air_temperature:jsonData.field1,
+      air_humidity:jsonData.field2
+    };
     // Vérification si les données existent dans jsonData
-    const headersOrder = ["field3", "field1", "field2"];
-    if (!headersOrder.every(field => field in jsonData)) {
-      return res.status(400).json({ message: 'Certaines données sont manquantes dans la réponse de ThingSpeak.' });
-    }
-
-    // Créer la première ligne avec les entêtes dans l'ordre souhaité
-    const headerLine = headersOrder.join(",");
-
-    // Créer la ligne suivante avec les valeurs dans le même ordre que headersOrder
-    const valuesLine = headersOrder.map(header => jsonData[header]).join(",");
-
-    // Combiner les entêtes et les valeurs pour former le CSV final
-    const csv = `${valuesLine}`;
-
-    // Log des données CSV avant l'envoi
-    console.log("CSV envoyé:", csv);
+   
 
     // Envoi du CSV au service de prédiction
     const predictions = await axios.post(
-      'https://k0yahuavu4.execute-api.us-east-1.amazonaws.com/stage_1/predire', 
-      csv, 
-      {
-        headers: {
-          'Content-Type': 'text/csv',  // Indiquer que le contenu est du CSV
-        }
-      }
+      'https://farmpred-mt5y.onrender.com/predict', 
+      donnee, 
     );
 
     // Log de la réponse du service de prédiction
-    console.log("Réponse du service de prédiction:", predictions.data);
+    console.log("Réponse du service de prédiction:", predictions.prediction);
 
     // Retourner les prédictions du service
-    res.status(200).send(predictions.data);
+    res.status(200).send(predictions.prediction);
   } catch (error) {
     // Log des erreurs pour débogage
     console.error('Erreur lors de la récupération des données :', error.message);
