@@ -225,7 +225,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     console.log("Réponse du service de prédiction:", predictions.prediction);
 
     // Retourner les prédictions du service
-    res.status(200).send(predictions.prediction);
+    res.status(200).send(predictions);
   } catch (error) {
     // Log des erreurs pour débogage
     console.error('Erreur lors de la récupération des données :', error.message);
