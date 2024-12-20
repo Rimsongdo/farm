@@ -207,7 +207,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     );
 
     const jsonData = response.data.feeds[0];
-    res.status(200).json(jsonData);
+    res.status(200).json(response);
     /*donnee={
       soil_humidity_2:jsonData.field3,
       air_temperature:jsonData.field1,
