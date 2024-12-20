@@ -194,10 +194,8 @@ notifs.post('/fetchPrediction', async (req, res) => {
     }
 
     // Recherche de l'utilisateur dans la base de données
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-    }
+    //const user = await User.findById(userId);
+    
 
    /*
     const nombreResult = 2; 
