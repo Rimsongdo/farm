@@ -217,9 +217,9 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const predictions = await axios.post(
       'https://farmpred-mt5y.onrender.com/predict', 
       {
-        soil_humidity_2:jsonData.field3,
-        air_temperature:jsonData.field1,
-        air_humidity:jsonData.field2
+        soil_humidity_2:50,
+        air_temperature:50,
+        air_humidity:50
       }
     );
     res.status(200).json(predictions);
