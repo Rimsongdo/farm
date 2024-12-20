@@ -207,26 +207,19 @@ notifs.post('/fetchPrediction', async (req, res) => {
     );
 
     const jsonData = response.data.feeds[0];
-    res.status(200).send(jsonData);
-    donnee={
+    res.status(200).json(jsonData);
+    /*donnee={
       soil_humidity_2:jsonData.field3,
       air_temperature:jsonData.field1,
       air_humidity:jsonData.field2
     };
-    // Vérification si les données existent dans jsonData
    
-
-    // Envoi du CSV au service de prédiction
     const predictions = await axios.post(
       'https://farmpred-mt5y.onrender.com/predict', 
       donnee, 
-    );
+    );*/
 
-    // Log de la réponse du service de prédiction
-    console.log("Réponse du service de prédiction:", predictions.prediction);
-
-    // Retourner les prédictions du service
-    //res.status(200).send(predictions);
+   
   } catch (error) {
     // Log des erreurs pour débogage
     console.error('Erreur lors de la récupération des données :', error.message);
