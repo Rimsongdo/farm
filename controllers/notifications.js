@@ -200,10 +200,10 @@ notifs.post('/fetchPrediction', async (req, res) => {
     }
 
     // Récupération des données depuis ThingSpeak
-    const results = 2; // Nombre de résultats à récupérer
+    const nombreResult = 2; // Nombre de résultats à récupérer
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
-      { params: { api_key: thingSpeakApiKey, results } }
+      { params: { api_key: thingSpeakApiKey, results:nombreResult } }
     );
 
     const jsonData = response.data.feeds[0];
