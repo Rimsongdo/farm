@@ -205,11 +205,8 @@ notifs.post('/fetchPrediction', async (req, res) => {
       air_humidity:66
     };
    
-    const predictions = await axios.post(
-      'https://farmpred-mt5y.onrender.com/predict', 
-      donnee, 
-    );
-    res.status(200).json(predictions);
+   
+    res.status(200).json(donnee);
    
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
