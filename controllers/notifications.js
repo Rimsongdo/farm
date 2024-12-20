@@ -200,7 +200,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
     }
 
    
-    const nombreResult = 2; 
+    const nombreResult = 1; 
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results:nombreResult } }
@@ -217,12 +217,12 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const predictions = await axios.post(
       'https://farmpred-mt5y.onrender.com/predict', 
       {
-        soil_humidity_2:60,
-        air_temperature:40,
-        air_humidity:66
+        soil_humidity_2:jsonData.field3,
+        air_temperature:jsonData.field1,
+        air_humidity:jsonData.field2
       }
     );
-    res.status(200).json(jsonData);
+    res.status(200).json(predictions);
    
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
