@@ -184,11 +184,20 @@ notifs.post('/getNotifications', async (req, res) => {
 
 notifs.post('/fetchPrediction', async (req, res) => {
   try {
-   
+    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
+
+    // Vérification des paramètres requis
+    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
+      return res.status(400).json({
+        message: 'Channel ID, API Key, et ID utilisateur sont requis.',
+      });
+    }
 
     // Recherche de l'utilisateur dans la base de données
-    //const user = await User.findById(userId);
-    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
 
    /*
     const nombreResult = 2; 
@@ -205,7 +214,10 @@ notifs.post('/fetchPrediction', async (req, res) => {
       air_humidity:66
     };
    
-   
+    /*const predictions = await axios.post(
+      'https://farmpred-mt5y.onrender.com/predict', 
+      donnee, 
+    );*/
     res.status(200).json(donnee);
    
   } catch (error) {
