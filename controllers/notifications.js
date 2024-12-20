@@ -184,14 +184,7 @@ notifs.post('/getNotifications', async (req, res) => {
 
 notifs.post('/fetchPrediction', async (req, res) => {
   try {
-    const { thingSpeakChannelId, thingSpeakApiKey, userId } = req.body;
-
-    // Vérification des paramètres requis
-    if (!thingSpeakChannelId || !thingSpeakApiKey || !userId) {
-      return res.status(400).json({
-        message: 'Channel ID, API Key, et ID utilisateur sont requis.',
-      });
-    }
+   
 
     // Recherche de l'utilisateur dans la base de données
     //const user = await User.findById(userId);
