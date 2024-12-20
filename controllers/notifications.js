@@ -199,26 +199,26 @@ notifs.post('/fetchPrediction', async (req, res) => {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    // Récupération des données depuis ThingSpeak
-    const nombreResult = 2; // Nombre de résultats à récupérer
+   /*
+    const nombreResult = 2; 
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`,
       { params: { api_key: thingSpeakApiKey, results:nombreResult } }
     );
 
-    const jsonData = response.data.feeds[0];
+    const jsonData = response.data.feeds[0];*/
     
     donnee={
-      soil_humidity_2:jsonData.field3,
-      air_temperature:jsonData.field1,
-      air_humidity:jsonData.field2
+      soil_humidity_2:60,
+      air_temperature:40,
+      air_humidity:66
     };
    
     const predictions = await axios.post(
       'https://farmpred-mt5y.onrender.com/predict', 
       donnee, 
     );
-    res.status(200).json(response);
+    res.status(200).json(predictions);
    
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
