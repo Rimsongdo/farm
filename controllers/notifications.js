@@ -209,9 +209,9 @@ notifs.post('/fetchPrediction', async (req, res) => {
     const jsonData = response.data.feeds[0];
     
     donnee={
-      soil_humidity_2:60,
-      air_temperature:40,
-      air_humidity:66
+      soil_humidity_2:jsonData.field3,
+      air_temperature:jsonData.field2,
+      air_humidity:jsonData.field2
     };
    
     const predictions = await axios.post(
@@ -222,7 +222,7 @@ notifs.post('/fetchPrediction', async (req, res) => {
         air_humidity:50
       }
     );
-    res.status(200).json(predictions);
+    res.status(200).json(jsonData);
    
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
