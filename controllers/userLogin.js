@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken'); // Pour générer des tokens JWT
 const express=require('express') // Pour hasher le mot de passe
 const userLogin = express.Router();
 const tools = require('../utils/config');
-
+const Device = require('../models/device'); // Import the Device model
 // Fonction pour créer un utilisateur
 const getTokenFrom = (request) => {
   const authorization = request.get('authorization');
@@ -16,27 +16,42 @@ const getTokenFrom = (request) => {
 };
 
 
-userLogin.post('/register',async (req, res) => {
-  const { name, email, password} = req.body;
+userLogin.post('/register', async (req, res) => {
+  const { name, email, password } = req.body;
 
   try {
-    // Vérifie si l'utilisateur existe déjà
+    // Check if the user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email déjà utilisé.' });
     }
 
-    // Hasher le mot de passe
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create a new user
     const user = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      devices: [], // Initialize with an empty array of devices
+      alerts: {
+        temperatureLow: false,
+        temperatureHigh: false,
+        humidityLow: false,
+        humidityHigh: false,
+        moistureLow: false,
+        moistureHigh: false,
+        npkLow: false,
+        npkHigh: false,
+      },
+      notifications: [], // Initialize with an empty array of notifications
     });
 
+    // Save the user to the database
     await user.save();
 
+    // Respond with success message and user details (excluding sensitive data)
     res.status(201).json({
       message: 'Utilisateur créé avec succès.',
       user: {
@@ -52,47 +67,53 @@ userLogin.post('/register',async (req, res) => {
 });
 
 
-
-// Fonction pour la connexion
 userLogin.post('/login', async (req, res) => {
-  const { email, password, fcmToken } = req.body; // Récupère le token FCM du client
+  const { email, password, fcmToken } = req.body; // Retrieve FCM token from the client
 
   try {
-    // Vérifie si l'utilisateur existe
-    const user = await User.findOne({ email });
+    // Check if the user exists
+    const user = await User.findOne({ email }).populate('devices'); // Populate the devices array
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    // Vérifie si le mot de passe est correct
+    // Check if the password is correct
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Mot de passe incorrect.' });
     }
 
-    // Mette à jour le token FCM de l'utilisateur
+    // Update the user's FCM token
     if (fcmToken) {
-      user.Token = fcmToken; // Enregistre le token FCM
-      await user.save(); // Sauvegarde les modifications
+      user.Token = fcmToken; // Save the FCM token
+      await user.save(); // Save the changes
     }
 
-    // Génère un token JWT
+    // Generate a JWT token
     const token = jwt.sign(
       { id: user._id, email: user.email },
-      tools.SECRET, 
-      { expiresIn: '1d' } // Expiration du token (1 jour ici)
+      tools.SECRET,
+      { expiresIn: '1d' } // Token expiration (1 day here)
     );
+
+    // Prepare the response with user details and device information
+    const userResponse = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      devices: user.devices.map(device => ({
+        id: device._id,
+        name: device.name,
+        type: device.type,
+        thingSpeakChannelId: device.thingSpeakChannelId,
+        thingSpeakApiKey: device.thingSpeakApiKey,
+      })),
+    };
 
     res.status(200).json({
       message: 'Connexion réussie.',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        thingSpeakChannelId: user.thingSpeakChannelId,
-        thingSpeakApiKey: user.thingSpeakApiKey,
-      },
+      user: userResponse,
     });
   } catch (error) {
     console.error(error);
@@ -101,62 +122,109 @@ userLogin.post('/login', async (req, res) => {
 });
 
 
-userLogin.post('/fetchData',async (req,res)=>{
-  try{
-    const thingSpeak=req.body;
-    const thingSpeakChannelId=thingSpeak.thingSpeakChannelId;
-    const thingSpeakApiKey=thingSpeak.thingSpeakApiKey;
-    const results=10;
-    const response = await axios.get(
-      `https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json?api_key=${thingSpeakApiKey}&results=${results}`,
-      
-    );
-    res.status(200).json(response.data);
-    
-  }
-  catch(error){
-    console.error(error);
-    res.status(500).json({ message: 'Erreur lors de la récupération des données.' });
-  }
-})
-
-userLogin.post('/addDevice', async (req, res) => {
+userLogin.post('/fetchData', async (req, res) => {
   try {
-    // Récupérer les données de la requête
-    const { serialNumber, userId, channelId, writeApiKey } = req.body;
+    const { userId, deviceId } = req.body; // Get userId and deviceId from the request
 
-    // Rechercher l'utilisateur par son ID
+    // Check if the user exists
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Utilisateur introuvable" });
     }
 
-    // Mettre à jour l'utilisateur avec les nouvelles informations
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { 
-        thingSpeakChannelId: channelId,
-        thingSpeakApiKey: writeApiKey,
-        serialNumber: serialNumber,
-      },
-      { new: true } // Pour retourner le document mis à jour
-    );
-
-    // Vérifier si la mise à jour a réussi
-    if (!updatedUser) {
-      return res.status(400).json({ message: "La mise à jour a échoué" });
+    // Check if the device exists and belongs to the user
+    const device = await Device.findOne({ _id: deviceId, userId: user._id });
+    if (!device) {
+      return res.status(404).json({ message: "Appareil introuvable ou n'appartient pas à l'utilisateur" });
     }
 
-    // Répondre avec l'utilisateur mis à jour
-    return res.status(200).json({ message: "Utilisateur mis à jour avec succès", user: updatedUser });
+    // Fetch data from ThingSpeak
+    const results = 10; // Number of results to fetch
+    const response = await axios.get(
+      `https://api.thingspeak.com/channels/${device.thingSpeakChannelId}/feeds.json?api_key=${device.thingSpeakApiKey}&results=${results}`
+    );
 
-  } catch (e) {
-    // Gérer les erreurs
-    console.error(e);
-    return res.status(500).json({ message: "Erreur du serveur", error: e.message });
+    // Respond with the fetched data
+    res.status(200).json(response.data);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des données.', error: error.message });
+  }
+});
+userLogin.post('/addDevice', async (req, res) => {
+  try {
+    // Retrieve data from the request
+    const { serialNumber, userId, channelId, readApiKey,name } = req.body;
+
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    // Check if a device with the same serialNumber already exists
+    const existingDevice = await Device.findOne({ serialNumber });
+    if (existingDevice) {
+      return res.status(400).json({ message: "Un appareil avec ce numéro de série existe déjà" });
+    }
+
+    // Create a new device
+    const newDevice = new Device({
+      serialNumber,
+      thingSpeakChannelId: channelId,
+      thingSpeakApiKey: readApiKey,
+      userId: user._id,
+      name:name // Associate the device with the user
+    });
+
+    // Save the new device to the database
+    await newDevice.save();
+
+    // Add the device to the user's devices array
+    user.devices.push(newDevice._id);
+    await user.save();
+
+    // Respond with success message and the new device details
+    return res.status(201).json({
+      message: "Appareil ajouté avec succès",
+      device: {
+        id: newDevice._id,
+        serialNumber: newDevice.serialNumber,
+        thingSpeakChannelId: newDevice.thingSpeakChannelId,
+        thingSpeakApiKey: newDevice.thingSpeakApiKey,
+        name:newDevice.name
+      },
+    });
+
+  } catch (error) {
+    // Handle errors
+    console.error(error);
+    return res.status(500).json({ message: "Erreur du serveur", error: error.message });
   }
 });
 
+userLogin.post('/fetchDevices', async (req, res) => {
+  const { userId } = req.body; // Get userId from the request body
+
+  try {
+    // Find the user and populate the devices array
+    const user = await User.findById(userId).populate('devices');
+
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Extract the devices from the user object
+    const devices = user.devices;
+
+    // Respond with the list of devices
+    res.status(200).json(devices);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des appareils:', error.message);
+    res.status(500).json({ message: 'Erreur lors de la récupération des appareils.' });
+  }
+});
 
 
 module.exports=userLogin; 
