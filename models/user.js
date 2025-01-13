@@ -19,16 +19,6 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6 },
   createdAt: { type: Date, default: Date.now },
   Token: { type: String },
-  alerts: {
-    temperatureLow: { type: Boolean, default: false },
-    temperatureHigh: { type: Boolean, default: false },
-    humidityLow: { type: Boolean, default: false },
-    humidityHigh: { type: Boolean, default: false },
-    moistureLow: { type: Boolean, default: false },
-    moistureHigh: { type: Boolean, default: false },
-    npkLow: { type: Boolean, default: false },
-    npkHigh: { type: Boolean, default: false },
-  },
   notifications: [notificationSchema],
   devices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Device' }], 
 }, {
