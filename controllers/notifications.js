@@ -120,14 +120,16 @@ const fetchAndNotify = async () => {
   }
 };
 const processAlert = async (user, device, field, value, minThreshold, maxThreshold, label) => {
-  const alertFieldLow = `${field}Low`;
+  
+  /*const alertFieldLow = `${field}Low`;
   const alertFieldHigh = `${field}High`;
 
-  // Si la valeur est en dehors du seuil, activer l'alerte correspondante et désactiver l'opposée
+  
   if (value < minThreshold && !user.alerts[alertFieldLow]) {
     user.alerts[alertFieldLow] = true;
-    user.alerts[alertFieldHigh] = false;  // Désactiver l'alerte opposée
+    user.alerts[alertFieldHigh] = false; 
     await user.save();
+    
     await sendNotification(
       user,
       device,
@@ -136,7 +138,7 @@ const processAlert = async (user, device, field, value, minThreshold, maxThresho
     );
   } else if (value > maxThreshold && !user.alerts[alertFieldHigh]) {
     user.alerts[alertFieldHigh] = true;
-    user.alerts[alertFieldLow] = false;  // Désactiver l'alerte opposée
+    user.alerts[alertFieldLow] = false;  
     await user.save();
     await sendNotification(
       user,
@@ -145,11 +147,11 @@ const processAlert = async (user, device, field, value, minThreshold, maxThresho
       `${label} a atteint ${value} sur l'appareil ${device.name}.`
     );
   } else if (value >= minThreshold && value <= maxThreshold) {
-    // Si la valeur est dans la plage normale, réinitialiser les deux alertes
+    
     user.alerts[alertFieldLow] = false;
     user.alerts[alertFieldHigh] = false;
     await user.save();
-  }
+  }*/
 };
 // Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs
 cron.schedule('* * * * *', () => {
