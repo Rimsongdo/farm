@@ -226,5 +226,53 @@ userLogin.post('/fetchDevices', async (req, res) => {
   }
 });
 
+userLogin.put('/updateUser', async (req, res) => {
+  const { userId, name, email, password } = req.body;
+
+  try {
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    // Update the user's name if provided
+    if (name) {
+      user.name = name;
+    }
+
+    // Update the user's email if provided
+    if (email) {
+      // Check if the new email is already in use
+      const existingUser = await User.findOne({ email });
+      if (existingUser && existingUser._id.toString() !== userId) {
+        return res.status(400).json({ message: 'Email déjà utilisé.' });
+      }
+      user.email = email;
+    }
+
+    // Update the user's password if provided
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user.password = hashedPassword;
+    }
+
+    // Save the updated user to the database
+    await user.save();
+
+    // Respond with success message and updated user details (excluding sensitive data)
+    res.status(200).json({
+      message: 'Utilisateur mis à jour avec succès.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur lors de la mise à jour de l’utilisateur.' });
+  }
+});
 
 module.exports=userLogin; 
