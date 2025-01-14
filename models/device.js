@@ -5,7 +5,8 @@ const deviceSchema = new mongoose.Schema({
     serialNumber: { type: String, required: true, unique: true, trim: true },
     thingSpeakChannelId: { type: String, required: true },
     thingSpeakApiKey: { type: String, required: true },
-    name:{type:String, required:true}, 
+    name: { type: String, required: true }, 
+    image: { type: String }, // New field for storing the image URL or file path
     alerts: {
       temperatureLow: { type: Boolean, default: false },
       temperatureHigh: { type: Boolean, default: false },
@@ -18,6 +19,6 @@ const deviceSchema = new mongoose.Schema({
     },
     createdAt: { type: Date, default: Date.now },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the user who owns the device
-  });
-  
-  module.exports = mongoose.model('Device', deviceSchema);
+});
+
+module.exports = mongoose.model('Device', deviceSchema);

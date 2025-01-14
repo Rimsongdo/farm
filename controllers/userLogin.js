@@ -6,7 +6,10 @@ const express=require('express') // Pour hasher le mot de passe
 const userLogin = express.Router();
 const tools = require('../utils/config');
 const Device = require('../models/device'); // Import the Device model
-// Fonction pour créer un utilisateur
+const multer = require('multer');
+
+const upload = multer({ dest: 'uploads/' }); // Save files in the 'uploads' directory 
+
 const getTokenFrom = (request) => {
   const authorization = request.get('authorization');
   if (authorization && authorization.startsWith('Bearer ')) {
@@ -274,5 +277,41 @@ userLogin.put('/updateUser', async (req, res) => {
     res.status(500).json({ message: 'Erreur lors de la mise à jour de l’utilisateur.' });
   }
 });
+
+
+
+
+
+userLogin.put('/updateDevice', upload.single('image'), async (req, res) => {
+  try {
+    
+    const { deviceId,name } = req.body;
+    const imagePath = req.file ? req.file.path : null; // Get the path of the uploaded file
+
+    // Find the device by ID
+    const device = await Device.findById(deviceId);
+    if (!device) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+
+    // Update the device's name if provided
+    if (name) {
+      device.name = name;
+    }
+
+    // Update the device's image if a new file is uploaded
+    if (imagePath) {
+      device.image = imagePath;
+    }
+
+    // Save the updated device
+    await device.save();
+
+    res.status(200).json(device);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 
 module.exports=userLogin; 
