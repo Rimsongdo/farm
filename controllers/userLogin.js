@@ -110,6 +110,7 @@ userLogin.post('/login', async (req, res) => {
         type: device.type,
         thingSpeakChannelId: device.thingSpeakChannelId,
         thingSpeakApiKey: device.thingSpeakApiKey,
+        image: device.image,
       })),
     };
 
