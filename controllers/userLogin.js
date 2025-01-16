@@ -1,4 +1,4 @@
-[const User = require('../models/user'); // Import du modèle User
+const User = require('../models/user'); // Import du modèle User
 const axios = require('axios'); // Pour appeler l'API de ThingSpeak
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken'); // Pour générer des tokens JWT
