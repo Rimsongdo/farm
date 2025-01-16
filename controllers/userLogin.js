@@ -1,4 +1,4 @@
-const User = require('../models/user'); // Import du modèle User
+[const User = require('../models/user'); // Import du modèle User
 const axios = require('axios'); // Pour appeler l'API de ThingSpeak
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken'); // Pour générer des tokens JWT
@@ -281,13 +281,9 @@ userLogin.put('/updateUser', async (req, res) => {
 
 
 
-
-
-userLogin.put('/updateDevice', upload.single('image'), async (req, res) => {
+userLogin.put('/updateDevice', async (req, res) => {
   try {
-    
-    const { deviceId,name } = req.body;
-    const imagePath = req.file ? req.file.path : null; // Get the path of the uploaded file
+    const { deviceId, name, imageUrl } = req.body;
 
     // Find the device by ID
     const device = await Device.findById(deviceId);
@@ -300,9 +296,9 @@ userLogin.put('/updateDevice', upload.single('image'), async (req, res) => {
       device.name = name;
     }
 
-    // Update the device's image if a new file is uploaded
-    if (imagePath) {
-      device.image = imagePath;
+    // Update the device's image URL if provided
+    if (imageUrl) {
+      device.image = imageUrl;
     }
 
     // Save the updated device
