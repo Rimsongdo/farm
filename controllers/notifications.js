@@ -23,8 +23,8 @@ const HUMIDITY_MIN_THRESHOLD = 30; // Seuil minimum
 const HUMIDITY_MAX_THRESHOLD = 80; // Seuil maximum
 const MOISTURE_MIN_THRESHOLD = 20; // Seuil minimum
 const MOISTURE_MAX_THRESHOLD = 80; // Seuil maximum
-const NPK_MIN_THRESHOLD = 0; // Seuil minimum pour npk (pluie)
-const NPK_MAX_THRESHOLD = 1; // Seuil maximum pour npk (pluie)
+const NPK_MIN_THRESHOLD = 0; // Seuil minimum
+const NPK_MAX_THRESHOLD = 1; // Seuil maximum
 
 // Fonction pour envoyer une notification via FCM
 const sendNotification = async (user, device, title, body) => {
@@ -34,17 +34,17 @@ const sendNotification = async (user, device, title, body) => {
   };
 
   try {
-    // Sauvegarder la notification dans la base de données
+    // Save the notification to the database
     user.notifications.push({
       message: body,
-      deviceId: device._id, // Sauvegarder l'ID de l'appareil pour référence
-      deviceName: device.name, // Sauvegarder le nom de l'appareil pour référence
+      deviceId: device._id, // Save the device ID for reference
+      deviceName: device.name, // Save the device name for reference
       date: new Date(),
-      isRead: false, // Marquer comme non lu par défaut
+      isRead: false, // Mark as unread by default
     });
     await user.save();
 
-    // Envoyer la notification via FCM
+    // Send the notification via FCM
     const response = await admin.messaging().send(message);
     console.log('Notification envoyée avec succès:', response);
     return response;
@@ -53,65 +53,10 @@ const sendNotification = async (user, device, title, body) => {
   }
 };
 
-// Fonction pour traiter les alertes
-const processAlert = async (user, device, field, value, minThreshold, maxThreshold, label) => {
-  const alertFieldLow = `${field}Low`;
-  const alertFieldHigh = `${field}High`;
-
-  // Traitement spécifique pour npk (pluie)
-  if (field === 'npk') {
-    const previousNpk = device.previousNpk !== undefined ? device.previousNpk : null;
-
-    // Vérifier si l'état de la pluie a changé
-    if (value !== previousNpk) {
-      const rainStatus = value === 1 ? 'déclenchée' : 'arrêtée';
-      await sendNotification(
-        user,
-        device,
-        `Pluie ${rainStatus} sur ${device.name}`,
-        `La pluie vient de se ${rainStatus} sur l'appareil ${device.name}.`
-      );
-
-      // Mettre à jour l'état précédent
-      device.previousNpk = value;
-      await device.save();
-    }
-    return; // Sortir de la fonction après avoir traité npk
-  }
-
-  // Traitement normal pour les autres champs
-  if (value < minThreshold && !user.alerts[alertFieldLow]) {
-    user.alerts[alertFieldLow] = true;
-    user.alerts[alertFieldHigh] = false;
-    await user.save();
-    await sendNotification(
-      user,
-      device,
-      `${label} basse sur ${device.name}`,
-      `${label} est tombée à ${value} sur l'appareil ${device.name}.`
-    );
-  } else if (value > maxThreshold && !user.alerts[alertFieldHigh]) {
-    user.alerts[alertFieldHigh] = true;
-    user.alerts[alertFieldLow] = false;
-    await user.save();
-    await sendNotification(
-      user,
-      device,
-      `${label} élevée sur ${device.name}`,
-      `${label} a atteint ${value} sur l'appareil ${device.name}.`
-    );
-  } else if (value >= minThreshold && value <= maxThreshold) {
-    user.alerts[alertFieldLow] = false;
-    user.alerts[alertFieldHigh] = false;
-    await user.save();
-  }
-};
-
-// Fonction pour récupérer les données et envoyer des notifications
 const fetchAndNotify = async () => {
   try {
     // Récupérer tous les utilisateurs
-    const users = await User.find().populate('devices'); // Récupérer les appareils associés
+    const users = await User.find().populate('devices'); // Populate devices
 
     if (!users || users.length === 0) {
       console.log('Aucun utilisateur trouvé.');
@@ -137,7 +82,7 @@ const fetchAndNotify = async () => {
         // Récupérer les données depuis ThingSpeak
         const results = 10;
         const response = await axios.get(`https://api.thingspeak.com/channels/${thingSpeakChannelId}/feeds.json`, {
-          params: { api_key: thingSpeakApiKey, results },
+          params: { api_key: thingSpeakApiKey, results }
         });
 
         const feeds = response.data.feeds;
@@ -152,7 +97,7 @@ const fetchAndNotify = async () => {
           temperature: parseFloat(latestData.field1),
           humidity: parseFloat(latestData.field2),
           moisture: parseFloat(latestData.field3),
-          npk: parseFloat(latestData.field4),
+          npk: parseFloat(latestData.field4)
         };
 
         // Vérifier la validité des données
@@ -163,56 +108,105 @@ const fetchAndNotify = async () => {
 
         console.log(`Appareil: ${device.name}, Température: ${data.temperature}°C, Humidité: ${data.humidity}%, Humidité du sol: ${data.moisture}%, NPK: ${data.npk}`);
 
-        // Traitement des alertes
+        // Traitement des alertes avec la logique d'activation/désactivation opposée
         await processAlert(user, device, 'temperature', data.temperature, TEMPERATURE_MIN_THRESHOLD, TEMPERATURE_MAX_THRESHOLD, 'Température');
         await processAlert(user, device, 'humidity', data.humidity, HUMIDITY_MIN_THRESHOLD, HUMIDITY_MAX_THRESHOLD, 'Humidité air');
         await processAlert(user, device, 'moisture', data.moisture, MOISTURE_MIN_THRESHOLD, MOISTURE_MAX_THRESHOLD, 'Humidité du sol');
-        await processAlert(user, device, 'npk', data.npk, NPK_MIN_THRESHOLD, NPK_MAX_THRESHOLD, 'NPK');
+        await processAlert(user, device, 'pluie', data.npk, NPK_MIN_THRESHOLD, NPK_MAX_THRESHOLD, 'NPK');
       }
     }
   } catch (error) {
     console.error('Erreur lors de la récupération des données ou de l\'envoi de la notification :', error.message);
   }
 };
+const processAlert = async (user, device, field, value, minThreshold, maxThreshold, label) => {
+  
+  const alertFieldLow = `${field}Low`;
+  const alertFieldHigh = `${field}High`;
 
-// Exécution périodique de la vérification des données et des notifications
+  
+  if (value <= minThreshold && !device.alerts[alertFieldLow]) {
+    device.alerts[alertFieldLow] = true;
+    device.alerts[alertFieldHigh] = false; 
+    await device.save();
+    if(field=="pluie"){
+      await sendNotification(
+      user,
+      device,
+      `Alerte de Pluie sur ${device.name}`,
+      `La pluie s'est arrétée l'appareil ${device.name}.`
+    );
+    }
+    else{
+    await sendNotification(
+      user,
+      device,
+      `${label} basse sur ${device.name}`,
+      `${label} est tombée à ${value} sur l'appareil ${device.name}.`
+    );}
+  } else if (value >= maxThreshold && !device.alerts[alertFieldHigh]) {
+    device.alerts[alertFieldHigh] = true;
+    device.alerts[alertFieldLow] = false;  
+    await device.save();
+    if(field=="pluie"){
+      await sendNotification(
+      user,
+      device,
+      `Alerte de Pluie sur ${device.name}`,
+      `Il pleut l'appareil ${device.name}.`
+    );
+    }
+    else{
+    await sendNotification(
+      user,
+      device,
+      `${label} élevée sur ${device.name}`,
+      `${label} a atteint ${value} sur l'appareil ${device.name}.`
+    );}
+  } else if (value >= minThreshold && value <= maxThreshold) {
+    
+    device.alerts[alertFieldLow] = false;
+    device.alerts[alertFieldHigh] = false;
+    await user.save();
+  }
+};
+// Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs
 cron.schedule('* * * * *', () => {
-  console.log('Exécution périodique de la vérification des données et des notifications...');
+  console.log('Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs...');
   fetchAndNotify();
 });
 
-// Route pour récupérer les données manuellement
 notifs.post('/fetchData', async (req, res) => {
   try {
     const { userId, deviceId } = req.body;
 
-    // Valider les entrées
+    // Validate input
     if (!userId || !deviceId) {
       return res.status(400).json({
         message: 'User ID and Device ID are required.',
       });
     }
 
-    // Vérifier si l'utilisateur existe
+    // Check if the user exists
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    // Vérifier si l'appareil existe et appartient à l'utilisateur
+    // Check if the device exists and belongs to the user
     const device = await Device.findOne({ _id: deviceId, userId: user._id });
     if (!device) {
       return res.status(404).json({ message: "Appareil introuvable ou n'appartient pas à l'utilisateur" });
     }
 
-    // Récupérer les données depuis ThingSpeak
-    const results = 10; // Nombre de résultats à récupérer
+    // Fetch data from ThingSpeak
+    const results = 10; // Number of results to fetch
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${device.thingSpeakChannelId}/feeds.json`,
       { params: { api_key: device.thingSpeakApiKey, results } }
     );
 
-    // Répondre avec les données récupérées
+    // Respond with the fetched data
     res.status(200).json(response.data);
   } catch (error) {
     console.error('Erreur lors de la récupération des données :', error.message);
@@ -220,18 +214,17 @@ notifs.post('/fetchData', async (req, res) => {
   }
 });
 
-// Route pour récupérer les notifications non lues
 notifs.post('/getNotifications', async (req, res) => {
   try {
     const { userId } = req.body;
 
-    // Vérifier si l'utilisateur existe
+   
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    // Récupérer les notifications non lues
+    
     const unreadNotifications = user.notifications.filter(notif => !notif.isRead);
 
     res.status(200).json({ notifications: unreadNotifications });
@@ -241,32 +234,31 @@ notifs.post('/getNotifications', async (req, res) => {
   }
 });
 
-// Route pour récupérer une prédiction
 notifs.post('/fetchPrediction', async (req, res) => {
   try {
     const { userId, deviceId } = req.body;
 
-    // Valider les entrées
+    // Validate input
     if (!userId || !deviceId) {
       return res.status(400).json({
         message: 'User ID and Device ID are required.',
       });
     }
 
-    // Vérifier si l'utilisateur existe
+    // Check if the user exists
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     }
 
-    // Vérifier si l'appareil existe et appartient à l'utilisateur
+    // Check if the device exists and belongs to the user
     const device = await Device.findOne({ _id: deviceId, userId: user._id });
     if (!device) {
       return res.status(404).json({ message: "Appareil introuvable ou n'appartient pas à l'utilisateur" });
     }
 
-    // Récupérer les données depuis ThingSpeak
-    const results = 1; // Récupérer uniquement la dernière donnée
+    // Fetch data from ThingSpeak
+    const results = 1; // Fetch only the latest data point
     const response = await axios.get(
       `https://api.thingspeak.com/channels/${device.thingSpeakChannelId}/feeds.json`,
       { params: { api_key: device.thingSpeakApiKey, results } }
@@ -277,32 +269,34 @@ notifs.post('/fetchPrediction', async (req, res) => {
       return res.status(404).json({ message: 'No data available for prediction.' });
     }
 
-    // Préparer les données pour la prédiction
+    // Prepare data for AI prediction
     const predictionData = {
       soil_humidity_2: parseFloat(jsonData.field3),
       air_temperature: parseFloat(jsonData.field2),
       air_humidity: parseFloat(jsonData.field2),
     };
 
-    // Valider les données de prédiction
+    // Validate prediction data
     if (Object.values(predictionData).some(isNaN)) {
       return res.status(400).json({ message: 'Invalid data for prediction.' });
     }
 
-    // Envoyer les données au service d'IA
+    // Send data to AI service
     const prediction = await axios.post('https://farmpred-mt5y.onrender.com/predict', predictionData);
 
-    // Valider la réponse de l'IA
+    // Validate AI response
     if (!prediction.data || !prediction.data.prediction) {
       return res.status(500).json({ message: 'Invalid response from AI service.' });
     }
 
-    // Retourner la prédiction
+    // Return prediction
     res.status(200).json(prediction.data);
   } catch (error) {
     console.error('Error fetching prediction:', error.message);
     res.status(500).json({ message: 'Error fetching prediction.' });
   }
 });
+
+
 
 module.exports = notifs;
