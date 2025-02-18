@@ -14,8 +14,8 @@ const deviceSchema = new mongoose.Schema({
       humidityHigh: { type: Boolean, default: false },
       moistureLow: { type: Boolean, default: false },
       moistureHigh: { type: Boolean, default: false },
-      npkLow: { type: Boolean, default: false },
-      npkHigh: { type: Boolean, default: false },
+      pluieLow: { type: Boolean, default: false },
+      pluieHigh: { type: Boolean, default: false },
     },
     createdAt: { type: Date, default: Date.now },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the user who owns the device
