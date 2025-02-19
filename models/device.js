@@ -6,7 +6,7 @@ const deviceSchema = new mongoose.Schema({
     thingSpeakChannelId: { type: String, required: true },
     thingSpeakApiKey: { type: String, required: true },
     name: { type: String, required: true }, 
-    image: { type: String }, // New field for storing the image URL or file path
+    image: { type: String }, 
     alerts: {
       temperatureLow: { type: Boolean, default: false },
       temperatureHigh: { type: Boolean, default: false },
