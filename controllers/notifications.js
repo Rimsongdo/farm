@@ -23,8 +23,8 @@ const HUMIDITY_MIN_THRESHOLD = 30; // Seuil minimum
 const HUMIDITY_MAX_THRESHOLD = 80; // Seuil maximum
 const MOISTURE_MIN_THRESHOLD = 20; // Seuil minimum
 const MOISTURE_MAX_THRESHOLD = 80; // Seuil maximum
-const NPK_MIN_THRESHOLD = 0; // Seuil minimum
-const NPK_MAX_THRESHOLD = 1; // Seuil maximum
+const NPK_MIN_THRESHOLD = 5; // Seuil minimum
+const NPK_MAX_THRESHOLD = 10; // Seuil maximum
 
 // Fonction pour envoyer une notification via FCM
 const sendNotification = async (user, device, title, body) => {
@@ -112,7 +112,7 @@ const fetchAndNotify = async () => {
         await processAlert(user, device, 'temperature', data.temperature, TEMPERATURE_MIN_THRESHOLD, TEMPERATURE_MAX_THRESHOLD, 'Température');
         await processAlert(user, device, 'humidity', data.humidity, HUMIDITY_MIN_THRESHOLD, HUMIDITY_MAX_THRESHOLD, 'Humidité air');
         await processAlert(user, device, 'moisture', data.moisture, MOISTURE_MIN_THRESHOLD, MOISTURE_MAX_THRESHOLD, 'Humidité du sol');
-        await processAlert(user, device, 'pluie', data.npk, NPK_MIN_THRESHOLD, NPK_MAX_THRESHOLD, 'NPK');
+        await processAlert(user, device, 'npk', data.npk, NPK_MIN_THRESHOLD, NPK_MAX_THRESHOLD, 'NPK');
       }
     }
   } catch (error) {
@@ -120,61 +120,37 @@ const fetchAndNotify = async () => {
   }
 };
 const processAlert = async (user, device, field, value, minThreshold, maxThreshold, label) => {
+  
   const alertFieldLow = `${field}Low`;
   const alertFieldHigh = `${field}High`;
 
-  console.log(`Valeur ${field}: ${value}, Alerte basse: ${device.alerts[alertFieldLow]}, Alerte haute: ${device.alerts[alertFieldHigh]}`);
-
-  if (value <= minThreshold && !device.alerts[alertFieldLow]) {
+  
+  if (value < minThreshold && !device.alerts[alertFieldLow]) {
     device.alerts[alertFieldLow] = true;
-    device.alerts[alertFieldHigh] = false;
-    await device.save()
-      .then(() => console.log(`Alertes mises à jour pour l'appareil ${device._id}`))
-      .catch(err => console.error(`Erreur lors de la sauvegarde des alertes pour l'appareil ${device._id}:`, err));
-
-    if (field === "pluie") {
-      await sendNotification(
-        user,
-        device,
-        `Alerte de Pluie sur ${device.name}`,
-        `La pluie s'est arrétée sur l'appareil ${device.name}.`
-      );
-    } else {
-      await sendNotification(
-        user,
-        device,
-        `${label} basse sur ${device.name}`,
-        `${label} est tombée à ${value} sur l'appareil ${device.name}.`
-      );
-    }
-  } else if (value >= maxThreshold && !device.alerts[alertFieldHigh]) {
+    device.alerts[alertFieldHigh] = false; 
+    await device.save();
+    
+    await sendNotification(
+      user,
+      device,
+      `${label} basse sur ${device.name}`,
+      `${label} est tombée à ${value} sur l'appareil ${device.name}.`
+    );
+  } else if (value > maxThreshold && !device.alerts[alertFieldHigh]) {
     device.alerts[alertFieldHigh] = true;
-    device.alerts[alertFieldLow] = false;
-    await device.save()
-      .then(() => console.log(`Alertes mises à jour pour l'appareil ${device._id}`))
-      .catch(err => console.error(`Erreur lors de la sauvegarde des alertes pour l'appareil ${device._id}:`, err));
-
-    if (field === "pluie") {
-      await sendNotification(
-        user,
-        device,
-        `Alerte de Pluie sur ${device.name}`,
-        `Il pleut sur l'appareil ${device.name}.`
-      );
-    } else {
-      await sendNotification(
-        user,
-        device,
-        `${label} élevée sur ${device.name}`,
-        `${label} a atteint ${value} sur l'appareil ${device.name}.`
-      );
-    }
+    device.alerts[alertFieldLow] = false;  
+    await device.save();
+    await sendNotification(
+      user,
+      device,
+      `${label} élevée sur ${device.name}`,
+      `${label} a atteint ${value} sur l'appareil ${device.name}.`
+    );
   } else if (value >= minThreshold && value <= maxThreshold) {
+    
     device.alerts[alertFieldLow] = false;
     device.alerts[alertFieldHigh] = false;
-    await device.save()
-      .then(() => console.log(`Alertes réinitialisées pour l'appareil ${device._id}`))
-      .catch(err => console.error(`Erreur lors de la réinitialisation des alertes pour l'appareil ${device._id}:`, err));
+    await user.save();
   }
 };
 // Exécution périodique de la vérification des données et des notifications pour tous les utilisateurs
